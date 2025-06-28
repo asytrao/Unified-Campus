@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "525930394964",
+    "project_id": "unified-campus-e53ee",
+    "storage_bucket": "unified-campus-e53ee.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:525930394964:android:2d6b986a62de52bd8304c1",
+        "android_client_info": {
+          "package_name": "com.unified.UnifiedCampus"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwqCeNKocW4yGFmb5r6F2NkmI8IEZ1c0w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
