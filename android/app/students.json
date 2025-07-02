@@ -1,0 +1,42 @@
+[
+  {
+    "name": "Atharv Yeshwantrao",
+    "email": "atharv@example.com",
+    "password": "atharv123",
+    "role": "student",
+    "department": "Computer Science",
+    "subject": "Data Structures"
+  },
+  {
+    "name": "Neha Sharma",
+    "email": "neha.sharma@example.com",
+    "password": "neha456",
+    "role": "student",
+    "department": "Electronics",
+    "subject": "Digital Circuits"
+  },
+  {
+    "name": "Rahul Iyer",
+    "email": "rahul.iyer@example.com",
+    "password": "rahul789",
+    "role": "student",
+    "department": "Mechanical",
+    "subject": "Thermodynamics"
+  },
+  {
+    "name": "Prof. Anjali Mehta",
+    "email": "anjali.mehta@university.edu",
+    "password": "prof1234",
+    "role": "professor",
+    "department": "Computer Science",
+    "subject": "Artificial Intelligence"
+  },
+  {
+    "name": "Prof. Ramesh Gupta",
+    "email": "ramesh.gupta@university.edu",
+    "password": "prof4567",
+    "role": "professor",
+    "department": "Mechanical",
+    "subject": "Heat Transfer"
+  }
+]
