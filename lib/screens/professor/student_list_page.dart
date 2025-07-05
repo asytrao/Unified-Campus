@@ -4,11 +4,13 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class StudentListPage extends StatelessWidget {
   final String year;
   final String department;
+  final String? subject;
 
   const StudentListPage({
     super.key,
     required this.year,
     required this.department,
+    this.subject,
   });
 
   @override
@@ -20,7 +22,11 @@ class StudentListPage extends StatelessWidget {
         .where('department', isEqualTo: department);
 
     return Scaffold(
-      appBar: AppBar(title: Text('$year Students')),
+      appBar: AppBar(
+        title: Text(
+          subject != null ? '$year - $subject Students' : '$year Students',
+        ),
+      ),
       body: StreamBuilder<QuerySnapshot>(
         stream: query.snapshots(),
         builder: (context, snapshot) {
@@ -38,10 +44,16 @@ class StudentListPage extends StatelessWidget {
             itemCount: students.length,
             itemBuilder: (context, index) {
               final data = students[index].data() as Map<String, dynamic>;
+
+              final name = data['name'] ?? 'Unnamed';
+              final email = data['email'] ?? 'No email';
+
               return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 child: ListTile(
-                  title: Text(data['name'] ?? ''),
-                  subtitle: Text(data['email'] ?? ''),
+                  leading: const CircleAvatar(child: Icon(Icons.person)),
+                  title: Text(name),
+                  subtitle: Text(email),
                 ),
               );
             },

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../auth/login_page.dart';
 
 class StudentHomePage extends StatefulWidget {
   const StudentHomePage({super.key});
@@ -28,7 +29,10 @@ class _StudentHomePageState extends State<StudentHomePage> {
       String uid = _auth.currentUser!.uid;
 
       // Get student profile
-      DocumentSnapshot doc = await _firestore.collection('users').doc(uid).get();
+      DocumentSnapshot doc = await _firestore
+          .collection('users')
+          .doc(uid)
+          .get();
       final data = doc.data() as Map<String, dynamic>;
 
       name = data['name'];
@@ -38,17 +42,19 @@ class _StudentHomePageState extends State<StudentHomePage> {
 
       // Get subject list from Firestore
       String subjectDocId = "${department}_$year";
-      DocumentSnapshot subjectDoc =
-          await _firestore.collection('subjects').doc(subjectDocId).get();
+      DocumentSnapshot subjectDoc = await _firestore
+          .collection('subjects')
+          .doc(subjectDocId)
+          .get();
 
       if (subjectDoc.exists) {
         subjects = List<String>.from(subjectDoc['subjects'] ?? []);
       }
     } catch (e) {
       print("Error: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error loading student data: $e")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error loading student data: $e")));
     } finally {
       setState(() => loading = false);
     }
@@ -61,7 +67,25 @@ class _StudentHomePageState extends State<StudentHomePage> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Student Dashboard')),
+      appBar: AppBar(
+        title: const Text('Student Dashboard'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Sign Out',
+            onPressed: () async {
+              await _auth.signOut();
+              if (mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                  (route) => false,
+                );
+              }
+            },
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: subjects.isEmpty
@@ -70,24 +94,31 @@ class _StudentHomePageState extends State<StudentHomePage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text("👋 Hello, $name", style: const TextStyle(fontSize: 20)),
-                  Text("🎓 $year - $department", style: const TextStyle(fontSize: 16)),
+                  Text(
+                    "🎓 $year - $department",
+                    style: const TextStyle(fontSize: 16),
+                  ),
                   const SizedBox(height: 24),
-                  const Text("📚 Your Subjects:",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text(
+                    "📚 Your Subjects:",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 12),
-                  ...subjects.map((subject) => Card(
-                        elevation: 2,
-                        child: ListTile(
-                          title: Text(subject),
-                          trailing: const Icon(Icons.arrow_forward_ios),
-                          onTap: () {
-                            // TODO: Navigate to subject detail page
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Tapped on $subject')),
-                            );
-                          },
-                        ),
-                      )),
+                  ...subjects.map(
+                    (subject) => Card(
+                      elevation: 2,
+                      child: ListTile(
+                        title: Text(subject),
+                        trailing: const Icon(Icons.arrow_forward_ios),
+                        onTap: () {
+                          // TODO: Navigate to subject detail page
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Tapped on $subject')),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
                 ],
               ),
       ),

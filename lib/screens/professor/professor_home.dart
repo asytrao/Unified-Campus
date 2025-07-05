@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'student_list_page.dart';
+
+import 'subject_list_page.dart'; // NEW: added import
 import 'subject_manager_page.dart';
 import 'add_year_page.dart';
+import '../auth/login_page.dart';
 
 class ProfessorHomePage extends StatefulWidget {
   const ProfessorHomePage({super.key});
@@ -18,6 +20,9 @@ class _ProfessorHomePageState extends State<ProfessorHomePage> {
 
   String? name, email, department;
   bool loading = true;
+
+  final List<String> defaultYears = ["First Year", "Second Year", "Third Year"];
+  List<String> years = [];
 
   @override
   void initState() {
@@ -37,6 +42,22 @@ class _ProfessorHomePageState extends State<ProfessorHomePage> {
       name = data['name'];
       email = data['email'];
       department = data['department'];
+
+      // Fetch years for this department
+      final deptDoc = await _firestore
+          .collection('departments')
+          .doc(department)
+          .get();
+      List<String> customYears = [];
+      if (deptDoc.exists) {
+        final deptData = deptDoc.data() as Map<String, dynamic>;
+        customYears = List<String>.from(deptData['years'] ?? []);
+      }
+      // Merge default and custom years, avoiding duplicates
+      years = [
+        ...defaultYears,
+        ...customYears.where((y) => !defaultYears.contains(y)),
+      ];
     } catch (e) {
       print("Error: $e");
       ScaffoldMessenger.of(context).showSnackBar(
@@ -50,6 +71,7 @@ class _ProfessorHomePageState extends State<ProfessorHomePage> {
   Widget buildCard(String title, IconData icon, VoidCallback onTap) {
     return Card(
       elevation: 4,
+      margin: const EdgeInsets.symmetric(vertical: 8),
       child: ListTile(
         leading: Icon(icon, size: 32),
         title: Text(
@@ -77,6 +99,22 @@ class _ProfessorHomePageState extends State<ProfessorHomePage> {
                 onPressed: () => Navigator.of(context).pop(),
               )
             : null,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            tooltip: 'Sign Out',
+            onPressed: () async {
+              await _auth.signOut();
+              if (mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                  (route) => false,
+                );
+              }
+            },
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -89,54 +127,36 @@ class _ProfessorHomePageState extends State<ProfessorHomePage> {
               style: const TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 24),
-
-            buildCard("📘 First Year", Icons.looks_one, () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => StudentListPage(
-                    year: 'First Year',
-                    department: department ?? '',
+            ...years.map(
+              (year) => buildCard(year, Icons.school, () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SubjectListPage(
+                      year: year,
+                      department: department ?? '',
+                    ),
                   ),
-                ),
-              );
-            }),
-            buildCard("📗 Second Year", Icons.looks_two, () {
+                );
+              }),
+            ),
+            buildCard("📖  🗂️ Subject Manager", Icons.menu_book, () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => StudentListPage(
-                    year: 'Second Year',
-                    department: department ?? '',
-                  ),
+                  builder: (context) => const SubjectManagerPage(),
                 ),
               );
             }),
-            buildCard("📙 Third Year", Icons.looks_3, () {
+            buildCard("➕  + Add Year Section", Icons.add_box, () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => StudentListPage(
-                    year: 'Third Year',
-                    department: department ?? '',
-                  ),
+                  builder: (context) => const AddYearSectionPage(),
                 ),
-              );
-            }),
-            const SizedBox(height: 10),
-            buildCard("🗂️ Subject Manager", Icons.menu_book, () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => SubjectManagerPage(year: 'First Year'),
-                ),
-              );
-            }),
-            buildCard("➕ Add Year Section", Icons.add_box, () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => AddYearSectionPage()),
-              );
+              ).then(
+                (_) => loadProfessorData(),
+              ); // Refresh years after returning
             }),
           ],
         ),

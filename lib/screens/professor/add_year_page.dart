@@ -13,12 +13,8 @@ class _AddYearSectionPageState extends State<AddYearSectionPage> {
   final _firestore = FirebaseFirestore.instance;
   final _auth = FirebaseAuth.instance;
 
-  final List<String> years = ["First Year", "Second Year", "Third Year"];
-  String? selectedYear;
   String? department;
-  List<String> subjects = [];
-  final _subjectController = TextEditingController();
-
+  final _yearController = TextEditingController();
   bool loading = true;
 
   @override
@@ -33,53 +29,36 @@ class _AddYearSectionPageState extends State<AddYearSectionPage> {
       final doc = await _firestore.collection('users').doc(uid).get();
       department = doc['department'];
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error fetching department: $e")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error fetching department: $e")));
     } finally {
       setState(() => loading = false);
     }
   }
 
-  void addSubject() {
-    final subject = _subjectController.text.trim();
-    if (subject.isNotEmpty && !subjects.contains(subject)) {
-      setState(() {
-        subjects.add(subject);
-        _subjectController.clear();
-      });
-    }
-  }
-
-  void removeSubject(String subject) {
-    setState(() {
-      subjects.remove(subject);
-    });
-  }
-
-  Future<void> saveSection() async {
-    if (selectedYear == null || department == null || subjects.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please fill all fields")),
-      );
+  Future<void> saveYear() async {
+    final year = _yearController.text.trim();
+    if (year.isEmpty || department == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Please enter a year name")));
       return;
     }
-
-    final docId = "${department}_$selectedYear";
-    await _firestore.collection('subjects').doc(docId).set({
-      'subjects': subjects,
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("✅ $selectedYear section added for $department")),
-    );
-
+    final deptRef = _firestore.collection('departments').doc(department);
+    await deptRef.set({
+      'years': FieldValue.arrayUnion([year]),
+    }, SetOptions(merge: true));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text("✅ $year added for $department")));
     Navigator.pop(context); // Go back to ProfessorHomePage
   }
 
   @override
   Widget build(BuildContext context) {
-    if (loading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (loading)
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
 
     return Scaffold(
       appBar: AppBar(title: const Text('Add Year Section')),
@@ -87,44 +66,18 @@ class _AddYearSectionPageState extends State<AddYearSectionPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            DropdownButtonFormField<String>(
-              value: selectedYear,
-              items: years.map((y) => DropdownMenuItem(value: y, child: Text(y))).toList(),
-              onChanged: (val) => setState(() => selectedYear = val),
-              decoration: const InputDecoration(labelText: "Select Year"),
-            ),
-            const SizedBox(height: 12),
             TextField(
-              controller: _subjectController,
-              decoration: InputDecoration(
-                labelText: "Add Subject",
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.add),
-                  onPressed: addSubject,
-                ),
+              controller: _yearController,
+              decoration: const InputDecoration(
+                labelText: "Enter Year (e.g. Fourth Year)",
               ),
             ),
-            const SizedBox(height: 12),
-            Expanded(
-              child: ListView.builder(
-                itemCount: subjects.length,
-                itemBuilder: (context, index) {
-                  final subject = subjects[index];
-                  return ListTile(
-                    title: Text(subject),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete),
-                      onPressed: () => removeSubject(subject),
-                    ),
-                  );
-                },
-              ),
-            ),
+            const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: saveSection,
+              onPressed: saveYear,
               icon: const Icon(Icons.save),
-              label: const Text("Save Year Section"),
-            )
+              label: const Text("Save Year"),
+            ),
           ],
         ),
       ),
