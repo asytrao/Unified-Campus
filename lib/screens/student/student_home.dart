@@ -15,7 +15,6 @@ class _StudentHomePageState extends State<StudentHomePage> {
   final _firestore = FirebaseFirestore.instance;
 
   String? name, email, department, year;
-  List<String> subjects = [];
   bool loading = true;
 
   @override
@@ -26,13 +25,8 @@ class _StudentHomePageState extends State<StudentHomePage> {
 
   Future<void> loadStudentData() async {
     try {
-      String uid = _auth.currentUser!.uid;
-
-      // Get student profile
-      DocumentSnapshot doc = await _firestore
-          .collection('users')
-          .doc(uid)
-          .get();
+      final uid = _auth.currentUser!.uid;
+      final doc = await _firestore.collection('users').doc(uid).get();
       final data = doc.data() as Map<String, dynamic>;
 
       name = data['name'];
@@ -40,31 +34,25 @@ class _StudentHomePageState extends State<StudentHomePage> {
       department = data['department'];
       year = data['year'];
 
-      // Get subject list from Firestore
-      String subjectDocId = "${department}_$year";
-      DocumentSnapshot subjectDoc = await _firestore
-          .collection('subjects')
-          .doc(subjectDocId)
-          .get();
-
-      if (subjectDoc.exists) {
-        subjects = List<String>.from(subjectDoc['subjects'] ?? []);
-      }
+      setState(() => loading = false);
     } catch (e) {
-      print("Error: $e");
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Error loading student data: $e")));
-    } finally {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error loading profile: $e")),
+      );
       setState(() => loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (loading || department == null || year == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
+
+    final subjectDocId = "${department!.trim().replaceAll(' ', '')}_${year!.trim().replaceAll(' ', '')}";
+    final subjectStream = _firestore.collection('subjects').doc(subjectDocId).snapshots();
 
     return Scaffold(
       appBar: AppBar(
@@ -88,22 +76,34 @@ class _StudentHomePageState extends State<StudentHomePage> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: subjects.isEmpty
-            ? const Center(child: Text("No subjects found for your year."))
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("👋 Hello, $name", style: const TextStyle(fontSize: 20)),
-                  Text(
-                    "🎓 $year - $department",
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    "📚 Your Subjects:",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
+        child: StreamBuilder<DocumentSnapshot>(
+          stream: subjectStream,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (!snapshot.hasData || !snapshot.data!.exists) {
+              return const Center(child: Text("No subjects found for your year."));
+            }
+
+            final data = snapshot.data!.data() as Map<String, dynamic>?;
+            final subjects = List<String>.from(data?['subjects'] ?? []);
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("👋 Hello, $name", style: const TextStyle(fontSize: 20)),
+                Text("🎓 $year - $department", style: const TextStyle(fontSize: 16)),
+                const SizedBox(height: 24),
+                const Text(
+                  "📚 Your Subjects:",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                if (subjects.isEmpty)
+                  const Text("No subjects found.")
+                else
                   ...subjects.map(
                     (subject) => Card(
                       elevation: 2,
@@ -119,8 +119,10 @@ class _StudentHomePageState extends State<StudentHomePage> {
                       ),
                     ),
                   ),
-                ],
-              ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
