@@ -33,17 +33,16 @@ class _SubjectManagerPageState extends State<SubjectManagerPage> {
       final uid = _auth.currentUser!.uid;
       final userDoc = await _firestore.collection('users').doc(uid).get();
       department = userDoc['department'];
-      // Fetch custom years from Firestore
-      final deptDoc = await _firestore
-          .collection('departments')
-          .doc(department)
-          .get();
+
+      // Fetch custom years for this department
+      final deptDoc = await _firestore.collection('departments').doc(department).get();
       List<String> customYears = [];
       if (deptDoc.exists) {
         final deptData = deptDoc.data() as Map<String, dynamic>;
         customYears = List<String>.from(deptData['years'] ?? []);
       }
-      // Merge default and custom years, avoiding duplicates
+
+      // Merge default and custom years
       allYears = [
         ...defaultYears,
         ...customYears.where((y) => !defaultYears.contains(y)),
@@ -62,24 +61,18 @@ class _SubjectManagerPageState extends State<SubjectManagerPage> {
 
     final docId =
         "${department!.trim().replaceAll(' ', '')}_${selectedYear!.trim().replaceAll(' ', '')}";
-    print("Fetching subjects from: $docId");
+    final subjectListRef =
+        _firestore.collection('subjects').doc(docId).collection('subjectList');
 
     try {
-      final doc = await _firestore.collection('subjects').doc(docId).get();
-      if (doc.exists) {
-        final data = doc.data();
-        setState(() {
-          subjects = List<String>.from(data?['subjects'] ?? []);
-        });
-      } else {
-        setState(() {
-          subjects = [];
-        });
-      }
+      final querySnapshot = await subjectListRef.get();
+      setState(() {
+        subjects = querySnapshot.docs.map((doc) => doc['name'] as String).toList();
+      });
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Error loading subjects: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error loading subjects: $e")),
+      );
     }
   }
 
@@ -88,15 +81,27 @@ class _SubjectManagerPageState extends State<SubjectManagerPage> {
 
     final docId =
         "${department!.trim().replaceAll(' ', '')}_${selectedYear!.trim().replaceAll(' ', '')}";
-    print("Saving subjects to: $docId");
+    final subjectListRef =
+        _firestore.collection('subjects').doc(docId).collection('subjectList');
 
-    await _firestore.collection('subjects').doc(docId).set({
-      'subjects': subjects,
-    });
+    try {
+      for (final subject in subjects) {
+        final subjectId = subject.trim().replaceAll(' ', '');
+        await subjectListRef.doc(subjectId).set({
+          'name': subject,
+          'year': selectedYear,
+          'department': department,
+        }, SetOptions(merge: true));
+      }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("✅ Subjects updated successfully")),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("✅ Subjects updated successfully")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error saving subjects: $e")),
+      );
+    }
   }
 
   void addSubject() {
@@ -109,10 +114,29 @@ class _SubjectManagerPageState extends State<SubjectManagerPage> {
     }
   }
 
-  void deleteSubject(String subject) {
-    setState(() {
-      subjects.remove(subject);
-    });
+  void deleteSubject(String subject) async {
+    if (department == null || selectedYear == null) return;
+
+    final docId =
+        "${department!.trim().replaceAll(' ', '')}_${selectedYear!.trim().replaceAll(' ', '')}";
+    final subjectListRef =
+        _firestore.collection('subjects').doc(docId).collection('subjectList');
+
+    try {
+      final subjectId = subject.trim().replaceAll(' ', '');
+      await subjectListRef.doc(subjectId).delete();
+      setState(() {
+        subjects.remove(subject);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("🗑️ $subject deleted")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error deleting subject: $e")),
+      );
+    }
   }
 
   @override
@@ -168,7 +192,7 @@ class _SubjectManagerPageState extends State<SubjectManagerPage> {
                           child: ListTile(
                             title: Text(subject),
                             trailing: IconButton(
-                              icon: const Icon(Icons.delete),
+                              icon: const Icon(Icons.delete, color: Colors.red),
                               onPressed: () => deleteSubject(subject),
                             ),
                           ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'student_list_page.dart';
+import 'subject_details_page.dart';
 
 class SubjectListPage extends StatelessWidget {
   final String year;
@@ -16,45 +16,50 @@ class SubjectListPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final docId =
         "${department.trim().replaceAll(' ', '')}_${year.trim().replaceAll(' ', '')}";
-    final docRef = FirebaseFirestore.instance.collection('subjects').doc(docId);
+    final subjectListRef = FirebaseFirestore.instance
+        .collection('subjects')
+        .doc(docId)
+        .collection('subjectList');
 
     return Scaffold(
       appBar: AppBar(title: Text("$year Subjects")),
-      body: StreamBuilder<DocumentSnapshot>(
-        stream: docRef.snapshots(),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: subjectListRef.snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (!snapshot.hasData || !snapshot.data!.exists) {
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
             return const Center(child: Text("No subjects found."));
           }
 
-          final data = snapshot.data!.data() as Map<String, dynamic>;
-          final subjects = List<String>.from(data['subjects'] ?? []);
-
-          if (subjects.isEmpty) {
-            return const Center(child: Text("No subjects available."));
-          }
+          final subjects = snapshot.data!.docs;
 
           return ListView.builder(
             itemCount: subjects.length,
             itemBuilder: (context, index) {
-              final subject = subjects[index];
+              final subjectDoc = subjects[index];
+              final subjectData = subjectDoc.data() as Map<String, dynamic>;
+              final subjectName =
+                  subjectData['name'] as String? ?? 'Unknown Subject';
+
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 child: ListTile(
-                  title: Text(subject),
+                  title: Text(subjectName),
+                  subtitle: Text(
+                    "${subjectData['year'] ?? year} • ${subjectData['department'] ?? department}",
+                  ),
                   trailing: const Icon(Icons.arrow_forward_ios),
                   onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => StudentListPage(
+                        builder: (_) => SubjectDetailPage(
+                          subject: subjectName,
                           year: year,
                           department: department,
-                          subject: subject,
                         ),
                       ),
                     );
