@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'screens/auth/login_page.dart';
-import 'screens/student/student_home.dart';
+import 'package:unified_campus/screens/student/student_home.dart';
 import 'screens/professor/professor_home.dart';
 
 class UnifiedCampusApp extends StatelessWidget {

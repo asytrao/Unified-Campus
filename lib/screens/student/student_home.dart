@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../auth/login_page.dart';
+import 'student_subject_options_page.dart';
 
 class StudentHomePage extends StatefulWidget {
   const StudentHomePage({super.key});
@@ -46,13 +47,16 @@ class _StudentHomePageState extends State<StudentHomePage> {
   @override
   Widget build(BuildContext context) {
     if (loading || department == null || year == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final subjectDocId = "${department!.trim().replaceAll(' ', '')}_${year!.trim().replaceAll(' ', '')}";
-    final subjectStream = _firestore.collection('subjects').doc(subjectDocId).snapshots();
+    final subjectDocId =
+        "${department!.trim().replaceAll(' ', '')}_${year!.trim().replaceAll(' ', '')}";
+    final subjectStream = _firestore
+        .collection('subjects')
+        .doc(subjectDocId)
+        .collection('subjectList')
+        .snapshots();
 
     return Scaffold(
       appBar: AppBar(
@@ -76,49 +80,62 @@ class _StudentHomePageState extends State<StudentHomePage> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: StreamBuilder<DocumentSnapshot>(
+        child: StreamBuilder<QuerySnapshot>(
           stream: subjectStream,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
             }
 
-            if (!snapshot.hasData || !snapshot.data!.exists) {
-              return const Center(child: Text("No subjects found for your year."));
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return const Center(
+                child: Text("No subjects found for your year."),
+              );
             }
 
-            final data = snapshot.data!.data() as Map<String, dynamic>?;
-            final subjects = List<String>.from(data?['subjects'] ?? []);
+            final subjects = snapshot.data!.docs;
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text("👋 Hello, $name", style: const TextStyle(fontSize: 20)),
-                Text("🎓 $year - $department", style: const TextStyle(fontSize: 16)),
+                Text(
+                  "🎓 $year - $department",
+                  style: const TextStyle(fontSize: 16),
+                ),
                 const SizedBox(height: 24),
                 const Text(
                   "📚 Your Subjects:",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
-                if (subjects.isEmpty)
-                  const Text("No subjects found.")
-                else
-                  ...subjects.map(
-                    (subject) => Card(
-                      elevation: 2,
-                      child: ListTile(
-                        title: Text(subject),
-                        trailing: const Icon(Icons.arrow_forward_ios),
-                        onTap: () {
-                          // TODO: Navigate to subject detail page
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Tapped on $subject')),
-                          );
-                        },
-                      ),
-                    ),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: subjects.length,
+                    itemBuilder: (context, index) {
+                      final subjectName = subjects[index]['name'];
+                      return Card(
+                        elevation: 2,
+                        child: ListTile(
+                          title: Text(subjectName),
+                          trailing: const Icon(Icons.arrow_forward_ios),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => StudentSubjectOptionsPage(
+                                  subject: subjectName,
+                                  department: department!,
+                                  year: year!,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
                   ),
+                ),
               ],
             );
           },

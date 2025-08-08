@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'student_list_page.dart';
 import 'manage_subject_content_page.dart';
+import 'professor_query_page.dart'; // 👈 Import your new query page here
 
 class SubjectDetailPage extends StatelessWidget {
   final String subject;
@@ -29,6 +30,7 @@ class SubjectDetailPage extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
+            // View Students
             ElevatedButton.icon(
               icon: const Icon(Icons.people),
               label: const Text("View Students"),
@@ -48,6 +50,7 @@ class SubjectDetailPage extends StatelessWidget {
 
             const SizedBox(height: 16),
 
+            // Manage Assignments & Notes
             ElevatedButton.icon(
               icon: const Icon(Icons.library_books),
               label: const Text("Manage Assignments & Notes"),
@@ -56,6 +59,26 @@ class SubjectDetailPage extends StatelessWidget {
                   context,
                   MaterialPageRoute(
                     builder: (context) => ManageSubjectContentPage(
+                      subject: subject,
+                      year: year,
+                      department: department,
+                    ),
+                  ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 16),
+
+            // View Student Queries
+            ElevatedButton.icon(
+              icon: const Icon(Icons.question_answer),
+              label: const Text("View Student Queries"),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProfessorQueryPage(
                       subject: subject,
                       year: year,
                       department: department,
