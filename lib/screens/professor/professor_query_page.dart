@@ -15,7 +15,8 @@ class ProfessorQueryPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final docId = "${department.trim().replaceAll(' ', '')}_${year.trim().replaceAll(' ', '')}";
+    final docId =
+        "${department.trim().replaceAll(' ', '')}_${year.trim().replaceAll(' ', '')}";
     final queryRef = FirebaseFirestore.instance
         .collection('queries')
         .doc(docId)
@@ -50,26 +51,72 @@ class ProfessorQueryPage extends StatelessWidget {
               final studentName = data['studentName'] ?? 'Unknown';
               final question = data['question'] ?? '';
               final isResolved = data['isResolved'] ?? false;
+              final solution = data['solution'] ?? '';
+
+              final solutionController = TextEditingController(text: solution);
 
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: ListTile(
-                  title: Text(studentName),
-                  subtitle: Text(question),
-                  trailing: IconButton(
-                    icon: Icon(
-                      isResolved ? Icons.check_circle : Icons.hourglass_bottom,
-                      color: isResolved ? Colors.green : Colors.orange,
-                    ),
-                    tooltip: isResolved ? "Resolved" : "Mark as Resolved",
-                    onPressed: isResolved
-                        ? null
-                        : () async {
-                            await docRef.update({'isResolved': true});
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("✅ Marked as resolved")),
-                            );
-                          },
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Student: $studentName",
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 6),
+                      Text("Query: $question"),
+                      const SizedBox(height: 12),
+                      if (isResolved)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Solution:",
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            Text(solution.isNotEmpty ? solution : "No solution provided"),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                const Icon(Icons.check_circle, color: Colors.green),
+                                const SizedBox(width: 6),
+                                const Text("Resolved", style: TextStyle(color: Colors.green)),
+                              ],
+                            ),
+                          ],
+                        )
+                      else
+                        Column(
+                          children: [
+                            TextField(
+                              controller: solutionController,
+                              maxLines: 2,
+                              decoration: const InputDecoration(
+                                labelText: "Type your solution...",
+                                border: OutlineInputBorder(),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            ElevatedButton.icon(
+                              icon: const Icon(Icons.check),
+                              label: const Text("Resolve Query"),
+                              onPressed: () async {
+                                final sol = solutionController.text.trim();
+                                await docRef.update({
+                                  'solution': sol,
+                                  'isResolved': true,
+                                });
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text("✅ Query marked as resolved")),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                    ],
                   ),
                 ),
               );

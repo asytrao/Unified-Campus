@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:unified_campus/screens/student/student_queries_page.dart';
+import 'package:unified_campus/screens/student/student_submissions_page.dart';
 
 class StudentSubjectOptionsPage extends StatelessWidget {
   final String subject;
@@ -27,19 +28,29 @@ class StudentSubjectOptionsPage extends StatelessWidget {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 24),
+
+            // 📂 View Submissions
             Card(
               child: ListTile(
                 leading: const Icon(Icons.assignment),
-                title: const Text("View Submissions"),
+                title: const Text("View / Submit Assignments & Practicals"),
                 onTap: () {
-                  // TODO: Navigate to submissions page
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Navigate to submissions")),
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => StudentSubmissionsPage(
+                        subject: subject,
+                        department: department,
+                        year: year,
+                      ),
+                    ),
                   );
                 },
               ),
             ),
             const SizedBox(height: 12),
+
+            // ❓ Ask/View Queries
             Card(
               child: ListTile(
                 leading: const Icon(Icons.help_outline),

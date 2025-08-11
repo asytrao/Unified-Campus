@@ -52,7 +52,7 @@ class _StudentHomePageState extends State<StudentHomePage> {
 
     final subjectDocId =
         "${department!.trim().replaceAll(' ', '')}_${year!.trim().replaceAll(' ', '')}";
-    final subjectStream = _firestore
+    final subjectListStream = _firestore
         .collection('subjects')
         .doc(subjectDocId)
         .collection('subjectList')
@@ -81,7 +81,7 @@ class _StudentHomePageState extends State<StudentHomePage> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: StreamBuilder<QuerySnapshot>(
-          stream: subjectStream,
+          stream: subjectListStream,
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());
@@ -109,32 +109,30 @@ class _StudentHomePageState extends State<StudentHomePage> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 12),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: subjects.length,
-                    itemBuilder: (context, index) {
-                      final subjectName = subjects[index]['name'];
-                      return Card(
-                        elevation: 2,
-                        child: ListTile(
-                          title: Text(subjectName),
-                          trailing: const Icon(Icons.arrow_forward_ios),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => StudentSubjectOptionsPage(
-                                  subject: subjectName,
-                                  department: department!,
-                                  year: year!,
-                                ),
+                ...subjects.map(
+                  (doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final subjectName = data['name'] ?? 'Unknown';
+                    return Card(
+                      elevation: 2,
+                      child: ListTile(
+                        title: Text(subjectName),
+                        trailing: const Icon(Icons.arrow_forward_ios),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => StudentSubjectOptionsPage(
+                                subject: subjectName,
+                                department: department!,
+                                year: year!,
                               ),
-                            );
-                          },
-                        ),
-                      );
-                    },
-                  ),
+                            ),
+                          );
+                        },
+                      ),
+                    );
+                  },
                 ),
               ],
             );

@@ -41,14 +41,6 @@ class _ManageSubjectContentPageState extends State<ManageSubjectContentPage> {
         .doc(docId)
         .collection('subjectList')
         .doc(subjectId);
-
-    print("🔍 DEBUG: Initialize ManageSubjectContentPage");
-    print("   📍 Department: ${widget.department}");
-    print("   📍 Year: ${widget.year}");
-    print("   📍 Subject: ${widget.subject}");
-    print("   📍 Doc ID: $docId");
-    print("   📍 Subject ID: $subjectId");
-    print("   📍 Full Firestore Path: subjects/$docId/subjectList/$subjectId");
   }
 
   Future<void> addContent() async {
@@ -63,12 +55,6 @@ class _ManageSubjectContentPageState extends State<ManageSubjectContentPage> {
     }
 
     try {
-      print("📌 DEBUG: Adding content");
-      print("   📍 Target Path: subjects/$docId/subjectList/$subjectId");
-      print("   📍 Content Title: $title");
-      print("   📍 Content Type: $selectedType");
-
-      // First, ensure the subject document exists
       await subjectDoc.set({
         'name': widget.subject,
         'year': widget.year,
@@ -76,9 +62,6 @@ class _ManageSubjectContentPageState extends State<ManageSubjectContentPage> {
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      print("✅ DEBUG: Subject document created/updated successfully");
-
-      // Add content to the content subcollection
       final contentRef = await subjectDoc.collection('content').add({
         'title': title,
         'description': desc,
@@ -88,12 +71,6 @@ class _ManageSubjectContentPageState extends State<ManageSubjectContentPage> {
         'docId': docId,
       });
 
-      print("✅ DEBUG: Content added successfully");
-      print("   📍 Content ID: ${contentRef.id}");
-      print(
-        "   📍 Full Content Path: subjects/$docId/subjectList/$subjectId/content/${contentRef.id}",
-      );
-
       _titleController.clear();
       _descController.clear();
 
@@ -101,16 +78,8 @@ class _ManageSubjectContentPageState extends State<ManageSubjectContentPage> {
         const SnackBar(content: Text("✅ Content added successfully")),
       );
     } catch (e) {
-      print("❌ DEBUG: Error adding content");
-      print("   📍 Error: $e");
-      print("   📍 Error Type: ${e.runtimeType}");
-
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("❌ Error adding content: $e"),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 5),
-        ),
+        SnackBar(content: Text("❌ Error adding content: $e")),
       );
     }
   }
@@ -120,38 +89,12 @@ class _ManageSubjectContentPageState extends State<ManageSubjectContentPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text("${widget.subject} – Manage Content"),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.bug_report),
-            onPressed: () {
-              print("🔍 DEBUG: Current Firestore Paths");
-              print("   📍 Doc ID: $docId");
-              print("   📍 Subject ID: $subjectId");
-              print(
-                "   📍 Subject Path: subjects/$docId/subjectList/$subjectId",
-              );
-              print(
-                "   📍 Content Path: subjects/$docId/subjectList/$subjectId/content",
-              );
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text("Debug info logged. Check console for paths."),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            },
-            tooltip: "Debug Info",
-          ),
-        ],
       ),
       body: Column(
         children: [
-          // Input Form
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 TextField(
                   controller: _titleController,
@@ -173,14 +116,8 @@ class _ManageSubjectContentPageState extends State<ManageSubjectContentPage> {
                 DropdownButtonFormField<String>(
                   value: selectedType,
                   items: const [
-                    DropdownMenuItem(
-                      value: "Assignment",
-                      child: Text("Assignment"),
-                    ),
-                    DropdownMenuItem(
-                      value: "Practical",
-                      child: Text("Practical"),
-                    ),
+                    DropdownMenuItem(value: "Assignment", child: Text("Assignment")),
+                    DropdownMenuItem(value: "Practical", child: Text("Practical")),
                     DropdownMenuItem(value: "Notes", child: Text("Notes")),
                   ],
                   onChanged: (value) {
@@ -200,26 +137,7 @@ class _ManageSubjectContentPageState extends State<ManageSubjectContentPage> {
               ],
             ),
           ),
-
           const Divider(),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                const Text(
-                  "📌 Added Content",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  "(${widget.subject})",
-                  style: const TextStyle(fontSize: 14, color: Colors.grey),
-                ),
-              ],
-            ),
-          ),
-
-          // Content List
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: subjectDoc
@@ -227,97 +145,38 @@ class _ManageSubjectContentPageState extends State<ManageSubjectContentPage> {
                   .orderBy('createdAt', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                if (snapshot.hasError) {
-                  print("❌ DEBUG: Stream error: ${snapshot.error}");
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.error, size: 48, color: Colors.red),
-                        const SizedBox(height: 16),
-                        Text("Error loading content: ${snapshot.error}"),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: () => setState(() {}),
-                          child: const Text("Retry"),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.library_books, size: 48, color: Colors.grey),
-                        SizedBox(height: 16),
-                        Text("No content added yet."),
-                        Text(
-                          "Add your first piece of content above!",
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                      ],
-                    ),
-                  );
+                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                if (snapshot.data!.docs.isEmpty) {
+                  return const Center(child: Text("No content added yet."));
                 }
 
                 final docs = snapshot.data!.docs;
-                print(
-                  "📊 DEBUG: Loaded ${docs.length} content items for subject: ${widget.subject}",
-                );
-
                 return ListView.builder(
                   itemCount: docs.length,
                   itemBuilder: (context, index) {
                     final data = docs[index].data() as Map<String, dynamic>;
+                    final contentId = docs[index].id;
                     return Card(
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
                       child: ListTile(
                         title: Text(data['title'] ?? ''),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "${data['type']} • ${data['description'] ?? ''}",
-                            ),
-                            if (data['createdAt'] != null)
-                              Text(
-                                "Created: ${(data['createdAt'] as Timestamp).toDate().toString().substring(0, 19)}",
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey,
-                                ),
+                        subtitle: Text("${data['type']} • ${data['description'] ?? ''}"),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ContentSubmissionStatusPage(
+                                department: widget.department,
+                                year: widget.year,
+                                contentId: contentId,
+                                contentTitle: data['title'] ?? '',
                               ),
-                          ],
-                        ),
+                            ),
+                          );
+                        },
                         trailing: IconButton(
                           icon: const Icon(Icons.delete, color: Colors.red),
                           onPressed: () async {
-                            try {
-                              await docs[index].reference.delete();
-                              print(
-                                "🗑️ DEBUG: Content deleted: ${docs[index].id}",
-                              );
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("🗑️ Content deleted"),
-                                ),
-                              );
-                            } catch (e) {
-                              print("❌ DEBUG: Error deleting content: $e");
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text("❌ Error deleting: $e")),
-                              );
-                            }
+                            await docs[index].reference.delete();
                           },
                         ),
                       ),
@@ -328,6 +187,82 @@ class _ManageSubjectContentPageState extends State<ManageSubjectContentPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class ContentSubmissionStatusPage extends StatelessWidget {
+  final String department;
+  final String year;
+  final String contentId;
+  final String contentTitle;
+
+  const ContentSubmissionStatusPage({
+    super.key,
+    required this.department,
+    required this.year,
+    required this.contentId,
+    required this.contentTitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final studentsRef = FirebaseFirestore.instance
+        .collection('users')
+        .where('role', isEqualTo: 'student')
+        .where('department', isEqualTo: department)
+        .where('year', isEqualTo: year);
+
+    final submissionsRef = FirebaseFirestore.instance
+        .collection('submissions')
+        .doc(contentId)
+        .collection('studentSubmissions');
+
+    return Scaffold(
+      appBar: AppBar(title: Text("Submissions – $contentTitle")),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: studentsRef.snapshots(),
+        builder: (context, studentsSnapshot) {
+          if (!studentsSnapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final students = studentsSnapshot.data!.docs;
+
+          return StreamBuilder<QuerySnapshot>(
+            stream: submissionsRef.snapshots(),
+            builder: (context, submissionsSnapshot) {
+              if (!submissionsSnapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              final submissions = submissionsSnapshot.data!.docs;
+              final submittedIds = submissions.map((s) => s.id).toSet();
+
+              final submitted = students.where((s) => submittedIds.contains(s.id)).toList();
+              final notSubmitted = students.where((s) => !submittedIds.contains(s.id)).toList();
+
+              final percentage = students.isEmpty
+                  ? 0
+                  : ((submitted.length / students.length) * 100).round();
+
+              return Padding(
+                padding: const EdgeInsets.all(16),
+                child: ListView(
+                  children: [
+                    Text("📊 Submission Rate: $percentage%"),
+                    const SizedBox(height: 16),
+                    Text("✅ Submitted (${submitted.length})", style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ...submitted.map((s) => ListTile(title: Text(s['name'] ?? 'Unknown'))),
+                    const SizedBox(height: 16),
+                    Text("❌ Not Submitted (${notSubmitted.length})", style: const TextStyle(fontWeight: FontWeight.bold)),
+                    ...notSubmitted.map((s) => ListTile(title: Text(s['name'] ?? 'Unknown'))),
+                  ],
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }

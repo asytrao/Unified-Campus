@@ -32,7 +32,7 @@ class _StudentQueriesPageState extends State<StudentQueriesPage> {
     final docId = "${widget.department.trim().replaceAll(' ', '')}_${widget.year.trim().replaceAll(' ', '')}";
     final subjectId = widget.subject.trim().replaceAll(' ', '');
 
-    // 🔁 Matches your Firestore rules structure
+    // Matches Firestore structure
     queryCollection = _firestore
         .collection('queries')
         .doc(docId)
@@ -51,9 +51,11 @@ class _StudentQueriesPageState extends State<StudentQueriesPage> {
       final userName = userDoc.data()?['name'] ?? 'Student';
 
       await queryCollection.add({
-        'query': queryText,
+        'question': queryText, // Changed to match professor page's field
         'studentId': user.uid,
         'studentName': userName,
+        'isResolved': false,
+        'solution': '',
         'createdAt': FieldValue.serverTimestamp(),
       });
 
@@ -87,10 +89,43 @@ class _StudentQueriesPageState extends State<StudentQueriesPage> {
                   padding: const EdgeInsets.all(16),
                   children: snapshot.data!.docs.map((doc) {
                     final data = doc.data() as Map<String, dynamic>;
+                    final question = data['question'] ?? '';
+                    final studentName = data['studentName'] ?? 'Unknown';
+                    final isResolved = data['isResolved'] ?? false;
+                    final solution = data['solution'] ?? '';
+
                     return Card(
-                      child: ListTile(
-                        title: Text(data['query'] ?? ''),
-                        subtitle: Text("by ${data['studentName'] ?? 'Unknown'}"),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              question,
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 4),
+                            Text("by $studentName"),
+                            const SizedBox(height: 8),
+                            if (isResolved)
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    "✅ Resolved",
+                                    style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text("Solution: $solution"),
+                                ],
+                              )
+                            else
+                              const Text(
+                                "⏳ Pending resolution",
+                                style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
+                              ),
+                          ],
+                        ),
                       ),
                     );
                   }).toList(),
