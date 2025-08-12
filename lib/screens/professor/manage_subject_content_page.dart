@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ManageSubjectContentPage extends StatefulWidget {
   final String subject;
@@ -62,7 +63,7 @@ class _ManageSubjectContentPageState extends State<ManageSubjectContentPage> {
         'lastUpdated': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
-      final contentRef = await subjectDoc.collection('content').add({
+      await subjectDoc.collection('content').add({
         'title': title,
         'description': desc,
         'type': selectedType,
@@ -78,18 +79,16 @@ class _ManageSubjectContentPageState extends State<ManageSubjectContentPage> {
         const SnackBar(content: Text("✅ Content added successfully")),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("❌ Error adding content: $e")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("❌ Error adding content: $e")));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text("${widget.subject} – Manage Content"),
-      ),
+      appBar: AppBar(title: Text("${widget.subject} – Manage Content")),
       body: Column(
         children: [
           Padding(
@@ -116,9 +115,22 @@ class _ManageSubjectContentPageState extends State<ManageSubjectContentPage> {
                 DropdownButtonFormField<String>(
                   value: selectedType,
                   items: const [
-                    DropdownMenuItem(value: "Assignment", child: Text("Assignment")),
-                    DropdownMenuItem(value: "Practical", child: Text("Practical")),
-                    DropdownMenuItem(value: "Notes", child: Text("Notes")),
+                    DropdownMenuItem(
+                      value: "Assignment",
+                      child: Text("Assignment"),
+                    ),
+                    DropdownMenuItem(
+                      value: "Practical",
+                      child: Text("Practical"),
+                    ),
+                    DropdownMenuItem(
+                      value: "Notes",
+                      child: Text("Notes")
+                    ),
+                    DropdownMenuItem(
+                      value: "Project",
+                      child: Text("Project"),
+                    ),
                   ],
                   onChanged: (value) {
                     if (value != null) setState(() => selectedType = value);
@@ -145,7 +157,8 @@ class _ManageSubjectContentPageState extends State<ManageSubjectContentPage> {
                   .orderBy('createdAt', descending: true)
                   .snapshots(),
               builder: (context, snapshot) {
-                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                if (!snapshot.hasData)
+                  return const Center(child: CircularProgressIndicator());
                 if (snapshot.data!.docs.isEmpty) {
                   return const Center(child: Text("No content added yet."));
                 }
@@ -159,7 +172,9 @@ class _ManageSubjectContentPageState extends State<ManageSubjectContentPage> {
                     return Card(
                       child: ListTile(
                         title: Text(data['title'] ?? ''),
-                        subtitle: Text("${data['type']} • ${data['description'] ?? ''}"),
+                        subtitle: Text(
+                          "${data['type']} • ${data['description'] ?? ''}",
+                        ),
                         onTap: () {
                           Navigator.push(
                             context,
@@ -167,6 +182,8 @@ class _ManageSubjectContentPageState extends State<ManageSubjectContentPage> {
                               builder: (_) => ContentSubmissionStatusPage(
                                 department: widget.department,
                                 year: widget.year,
+                                subjectId: subjectId,
+                                docId: docId,
                                 contentId: contentId,
                                 contentTitle: data['title'] ?? '',
                               ),
@@ -195,6 +212,8 @@ class _ManageSubjectContentPageState extends State<ManageSubjectContentPage> {
 class ContentSubmissionStatusPage extends StatelessWidget {
   final String department;
   final String year;
+  final String subjectId;
+  final String docId;
   final String contentId;
   final String contentTitle;
 
@@ -202,9 +221,18 @@ class ContentSubmissionStatusPage extends StatelessWidget {
     super.key,
     required this.department,
     required this.year,
+    required this.subjectId,
+    required this.docId,
     required this.contentId,
     required this.contentTitle,
   });
+
+  Future<void> _openFile(String url) async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      throw Exception('Could not launch $url');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -215,9 +243,13 @@ class ContentSubmissionStatusPage extends StatelessWidget {
         .where('year', isEqualTo: year);
 
     final submissionsRef = FirebaseFirestore.instance
-        .collection('submissions')
+        .collection('subjects')
+        .doc(docId)
+        .collection('subjectList')
+        .doc(subjectId)
+        .collection('content')
         .doc(contentId)
-        .collection('studentSubmissions');
+        .collection('submissions');
 
     return Scaffold(
       appBar: AppBar(title: Text("Submissions – $contentTitle")),
@@ -239,8 +271,12 @@ class ContentSubmissionStatusPage extends StatelessWidget {
               final submissions = submissionsSnapshot.data!.docs;
               final submittedIds = submissions.map((s) => s.id).toSet();
 
-              final submitted = students.where((s) => submittedIds.contains(s.id)).toList();
-              final notSubmitted = students.where((s) => !submittedIds.contains(s.id)).toList();
+              final submitted = students
+                  .where((s) => submittedIds.contains(s.id))
+                  .toList();
+              final notSubmitted = students
+                  .where((s) => !submittedIds.contains(s.id))
+                  .toList();
 
               final percentage = students.isEmpty
                   ? 0
@@ -252,11 +288,42 @@ class ContentSubmissionStatusPage extends StatelessWidget {
                   children: [
                     Text("📊 Submission Rate: $percentage%"),
                     const SizedBox(height: 16),
-                    Text("✅ Submitted (${submitted.length})", style: const TextStyle(fontWeight: FontWeight.bold)),
-                    ...submitted.map((s) => ListTile(title: Text(s['name'] ?? 'Unknown'))),
+                    Text(
+                      "✅ Submitted (${submitted.length})",
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    ...submitted.map((s) {
+                      QueryDocumentSnapshot? submissionDoc;
+                      try {
+                        submissionDoc = submissions.firstWhere(
+                          (sub) => sub.id == s.id,
+                        );
+                      } catch (e) {
+                        submissionDoc = null;
+                      }
+
+                      final fileUrl = submissionDoc != null
+                          ? (submissionDoc['fileUrl'] ?? '')
+                          : '';
+
+                      return ListTile(
+                        title: Text(s['name'] ?? 'Unknown'),
+                        subtitle: fileUrl.isNotEmpty
+                            ? TextButton(
+                                onPressed: () => _openFile(fileUrl),
+                                child: const Text("View Submission"),
+                              )
+                            : null,
+                      );
+                    }),
                     const SizedBox(height: 16),
-                    Text("❌ Not Submitted (${notSubmitted.length})", style: const TextStyle(fontWeight: FontWeight.bold)),
-                    ...notSubmitted.map((s) => ListTile(title: Text(s['name'] ?? 'Unknown'))),
+                    Text(
+                      "❌ Not Submitted (${notSubmitted.length})",
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    ...notSubmitted.map(
+                      (s) => ListTile(title: Text(s['name'] ?? 'Unknown')),
+                    ),
                   ],
                 ),
               );

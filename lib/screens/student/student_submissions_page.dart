@@ -1,9 +1,10 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:http/http.dart' as http;
 
 class StudentSubmissionsPage extends StatefulWidget {
   final String subject;
@@ -24,7 +25,10 @@ class StudentSubmissionsPage extends StatefulWidget {
 class _StudentSubmissionsPageState extends State<StudentSubmissionsPage> {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
-  final _storage = FirebaseStorage.instance;
+
+  // Cloudinary details
+  final String cloudName = "dzxbqfatf";
+  final String uploadPreset = "unisgned_preset";
 
   late final CollectionReference contentCollection;
   late final String studentId;
@@ -50,14 +54,9 @@ class _StudentSubmissionsPageState extends State<StudentSubmissionsPage> {
 
   Future<void> _pickAndUploadFile(String contentId) async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.any,
-      );
+      final result = await FilePicker.platform.pickFiles(type: FileType.any);
 
-      if (result == null || result.files.single.path == null) {
-        // user cancelled
-        return;
-      }
+      if (result == null || result.files.single.path == null) return;
 
       final filePath = result.files.single.path!;
       final fileName = result.files.single.name;
@@ -68,34 +67,28 @@ class _StudentSubmissionsPageState extends State<StudentSubmissionsPage> {
         _progress = 0.0;
       });
 
-      final docId =
-          "${widget.department.trim().replaceAll(' ', '')}_${widget.year.trim().replaceAll(' ', '')}";
-      final subjectId = widget.subject.trim().replaceAll(' ', '');
+      // Upload to Cloudinary
+      final uri = Uri.parse("https://api.cloudinary.com/v1_1/$cloudName/auto/upload");
+      final request = http.MultipartRequest("POST", uri)
+        ..fields['upload_preset'] = uploadPreset
+        ..files.add(await http.MultipartFile.fromPath('file', file.path));
 
-      // Good storage path: helps organization
-      final storageRef = _storage.ref().child(
-        'submissions/$docId/$subjectId/$contentId/$studentId/$fileName',
-      );
+      final streamedResponse = await request.send();
 
-      final uploadTask = storageRef.putFile(file);
+      final response = await http.Response.fromStream(streamedResponse);
+      if (response.statusCode != 200) {
+        throw Exception("Upload failed: ${response.body}");
+      }
 
-      // Listen to progress
-      uploadTask.snapshotEvents.listen((taskSnapshot) {
-        final bytesTransferred = taskSnapshot.bytesTransferred.toDouble();
-        final totalBytes = taskSnapshot.totalBytes.toDouble();
-        if (totalBytes > 0) {
-          final prog = bytesTransferred / totalBytes;
-          if (mounted) {
-            setState(() => _progress = prog);
-          }
-        }
-      });
+      final responseData = json.decode(response.body);
+      final downloadUrl = responseData['secure_url'];
 
-      final taskSnapshot = await uploadTask;
-      final downloadUrl = await taskSnapshot.ref.getDownloadURL();
-
-      // Save submission info under the content doc (one doc per student)
-      await contentCollection.doc(contentId).collection('submissions').doc(studentId).set({
+      // Save submission info in Firestore
+      await contentCollection
+          .doc(contentId)
+          .collection('submissions')
+          .doc(studentId)
+          .set({
         'fileName': fileName,
         'fileUrl': downloadUrl,
         'submittedAt': FieldValue.serverTimestamp(),
@@ -161,10 +154,12 @@ class _StudentSubmissionsPageState extends State<StudentSubmissionsPage> {
                         .doc(studentId)
                         .snapshots(),
                     builder: (context, submissionSnapshot) {
-                      bool isSubmitted = submissionSnapshot.hasData && submissionSnapshot.data!.exists;
+                      bool isSubmitted = submissionSnapshot.hasData &&
+                          submissionSnapshot.data!.exists;
 
                       return Card(
-                        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
                         child: ListTile(
                           title: Text(title),
                           subtitle: Column(
@@ -174,20 +169,27 @@ class _StudentSubmissionsPageState extends State<StudentSubmissionsPage> {
                               if (dueDate != null)
                                 Text(
                                   "Due: ${dueDate.day}/${dueDate.month}/${dueDate.year}",
-                                  style: const TextStyle(color: Colors.redAccent),
+                                  style: const TextStyle(
+                                      color: Colors.redAccent),
                                 ),
                               const SizedBox(height: 4),
                               Text(
-                                isSubmitted ? "✅ Submitted" : "⏳ Not submitted yet",
+                                isSubmitted
+                                    ? "✅ Submitted"
+                                    : "⏳ Not submitted yet",
                                 style: TextStyle(
-                                  color: isSubmitted ? Colors.green : Colors.orange,
+                                  color: isSubmitted
+                                      ? Colors.green
+                                      : Colors.orange,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ],
                           ),
                           trailing: ElevatedButton(
-                            onPressed: _uploading ? null : () => _pickAndUploadFile(content.id),
+                            onPressed: _uploading
+                                ? null
+                                : () => _pickAndUploadFile(content.id),
                             child: Text(isSubmitted ? "Resubmit" : "Submit"),
                           ),
                         ),
@@ -199,7 +201,6 @@ class _StudentSubmissionsPageState extends State<StudentSubmissionsPage> {
             },
           ),
 
-          // Simple upload overlay
           if (_uploading)
             Positioned(
               bottom: 16,
@@ -211,12 +212,10 @@ class _StudentSubmissionsPageState extends State<StudentSubmissionsPage> {
                   padding: const EdgeInsets.all(12.0),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text("Uploading..."),
-                      const SizedBox(height: 8),
-                      LinearProgressIndicator(value: _progress),
-                      const SizedBox(height: 4),
-                      Text("${(_progress * 100).toStringAsFixed(0)}%"),
+                    children: const [
+                      Text("Uploading..."),
+                      SizedBox(height: 8),
+                      LinearProgressIndicator(),
                     ],
                   ),
                 ),
