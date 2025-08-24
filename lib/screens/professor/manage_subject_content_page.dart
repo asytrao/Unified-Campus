@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 class ManageSubjectContentPage extends StatefulWidget {
   final String subject;
@@ -227,10 +228,30 @@ class ContentSubmissionStatusPage extends StatelessWidget {
     required this.contentTitle,
   });
 
-  Future<void> _openFile(String url) async {
-    final uri = Uri.parse(url);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      throw Exception('Could not launch $url');
+  void _openFile(BuildContext context, String url) {
+    if (url.toLowerCase().endsWith('.pdf')) {
+      // Open PDF viewer inside the app
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PDFViewerPage(pdfUrl: url),
+        ),
+      );
+    } else if (url.toLowerCase().endsWith('.jpg') ||
+        url.toLowerCase().endsWith('.jpeg') ||
+        url.toLowerCase().endsWith('.png')) {
+      // Open Image inside the app
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ImageViewerPage(imageUrl: url),
+        ),
+      );
+    } else {
+      // Unsupported type
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("⚠️ Unsupported file type")),
+      );
     }
   }
 
@@ -310,7 +331,7 @@ class ContentSubmissionStatusPage extends StatelessWidget {
                         title: Text(s['name'] ?? 'Unknown'),
                         subtitle: fileUrl.isNotEmpty
                             ? TextButton(
-                                onPressed: () => _openFile(fileUrl),
+                                onPressed: () => _openFile(context, fileUrl),
                                 child: const Text("View Submission"),
                               )
                             : null,
@@ -330,6 +351,36 @@ class ContentSubmissionStatusPage extends StatelessWidget {
             },
           );
         },
+      ),
+    );
+  }
+}
+
+// PDF Viewer Page
+class PDFViewerPage extends StatelessWidget {
+  final String pdfUrl;
+  const PDFViewerPage({super.key, required this.pdfUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("View PDF")),
+      body: SfPdfViewer.network(pdfUrl),
+    );
+  }
+}
+
+// Image Viewer Page
+class ImageViewerPage extends StatelessWidget {
+  final String imageUrl;
+  const ImageViewerPage({super.key, required this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("View Image")),
+      body: Center(
+        child: Image.network(imageUrl),
       ),
     );
   }

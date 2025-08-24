@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../auth/login_page.dart';
 import 'student_subject_options_page.dart';
+import 'communities_page.dart'; // <-- import our new page
 
 class StudentHomePage extends StatefulWidget {
   const StudentHomePage({super.key});
@@ -95,8 +96,7 @@ class _StudentHomePageState extends State<StudentHomePage> {
 
             final subjects = snapshot.data!.docs;
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            return ListView(
               children: [
                 Text("👋 Hello, $name", style: const TextStyle(fontSize: 20)),
                 Text(
@@ -104,6 +104,8 @@ class _StudentHomePageState extends State<StudentHomePage> {
                   style: const TextStyle(fontSize: 16),
                 ),
                 const SizedBox(height: 24),
+
+                // Subjects Section
                 const Text(
                   "📚 Your Subjects:",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -133,6 +135,28 @@ class _StudentHomePageState extends State<StudentHomePage> {
                       ),
                     );
                   },
+                ),
+
+                const SizedBox(height: 24),
+
+                // Communities Section
+                const Text(
+                  "👥 Communities:",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Card(
+                  elevation: 2,
+                  child: ListTile(
+                    title: const Text("View Communities"),
+                    trailing: const Icon(Icons.arrow_forward_ios),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => CommunitiesPage()),
+                      );
+                    },
+                  ),
                 ),
               ],
             );
