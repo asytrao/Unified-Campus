@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'screens/splash_screen.dart';
 import 'screens/auth/login_page.dart';
 import 'package:unified_campus/screens/student/student_home.dart';
 import 'screens/professor/professor_home.dart';
@@ -10,18 +11,18 @@ class UnifiedCampusApp extends StatelessWidget {
 
   Future<Widget> _getInitialScreen() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return const LoginPage();
+    if (user == null) return const SplashScreen();
     // Fetch user role from Firestore
     final doc = await FirebaseFirestore.instance
         .collection('users')
         .doc(user.uid)
         .get();
-    if (!doc.exists) return const LoginPage();
+    if (!doc.exists) return const SplashScreen();
     final data = doc.data() as Map<String, dynamic>;
     final role = data['role'];
     if (role == 'student') return const StudentHomePage();
     if (role == 'professor') return const ProfessorHomePage();
-    return const LoginPage();
+    return const SplashScreen();
   }
 
   @override
@@ -37,7 +38,7 @@ class UnifiedCampusApp extends StatelessWidget {
               body: Center(child: CircularProgressIndicator()),
             );
           }
-          return snapshot.data ?? const LoginPage();
+          return snapshot.data ?? const SplashScreen();
         },
       ),
       debugShowCheckedModeBanner: false,
