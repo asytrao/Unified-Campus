@@ -18,6 +18,8 @@ class _LoginPageState extends State<LoginPage> {
   bool loading = false;
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
+  static const Color kPrimary = Color(0xFF2EC4B6); // Teal to match app logo
+  static const Color kTextDark = Color(0xFF2C3E50);
 
   Future<void> login() async {
     setState(() => loading = true);
@@ -76,36 +78,26 @@ class _LoginPageState extends State<LoginPage> {
             return SingleChildScrollView(
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: IntrinsicHeight(
+                child: Align(
+                  alignment: Alignment.topCenter,
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Top spacer to push content down
-                      SizedBox(height: constraints.maxHeight * 0.1),
+                      SizedBox(height: constraints.maxHeight * 0.06),
 
-                      // App logo
-                      Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, 5),
-                            ),
-                          ],
-                        ),
-                        child: ClipOval(
-                          child: Image.asset(
-                            'assets/logos/logo.jpg',
-                            fit: BoxFit.cover,
-                          ),
+                      // App name image
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                        child: Image.asset(
+                          'assets/images/app_name.png',
+                          height: 68,
+                          width: 260,
+                          fit: BoxFit.contain,
                         ),
                       ),
 
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 12),
 
                       // Login title
                       const Text(
@@ -113,16 +105,16 @@ class _LoginPageState extends State<LoginPage> {
                         style: TextStyle(
                           fontSize: 36,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF2C3E50), // Dark gray
+                          color: kTextDark, // Dark gray
                         ),
                       ),
 
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 32),
 
                       // Illustration section
                       Container(
-                        height: 180,
-                        width: 200, // Fixed width for better centering
+                        height: 220,
+                        width: 260, // Slightly larger for prominence
                         child: Image.asset(
                           'assets/images/login_clipart.png',
                           fit: BoxFit.contain,
@@ -147,7 +139,7 @@ class _LoginPageState extends State<LoginPage> {
                           decoration: const InputDecoration(
                             hintText: 'Email',
                             hintStyle: TextStyle(
-                              color: Color(0xFFFF6B6B), // Coral-pink
+                              color: kPrimary, // Teal
                               fontSize: 16,
                             ),
                             prefixIcon: Icon(
@@ -182,7 +174,7 @@ class _LoginPageState extends State<LoginPage> {
                           decoration: const InputDecoration(
                             hintText: 'Password',
                             hintStyle: TextStyle(
-                              color: Color(0xFFFF6B6B), // Coral-pink
+                              color: kPrimary, // Teal
                               fontSize: 16,
                             ),
                             prefixIcon: Icon(
@@ -207,9 +199,7 @@ class _LoginPageState extends State<LoginPage> {
                         child: ElevatedButton(
                           onPressed: loading ? null : login,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(
-                              0xFFFF6B6B,
-                            ), // Coral-pink
+                            backgroundColor: kPrimary, // Teal
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(15),
@@ -242,8 +232,7 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                       ),
 
-                      // Bottom spacer to balance the layout
-                      const Spacer(),
+                      const SizedBox(height: 12),
                     ],
                   ),
                 ),
