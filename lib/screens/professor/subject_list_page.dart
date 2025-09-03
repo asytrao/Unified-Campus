@@ -159,9 +159,12 @@ class _SubjectTile extends StatelessWidget {
   final String subtitle;
   final VoidCallback onTap;
 
-  static const Color _primary = Color(0xFF2EC4B6);
+  static const Color _primary = Color.fromARGB(255, 90, 237, 223);
   static const Color _textDark = Color(0xFF2C3E50);
   static const Color _surface = Colors.white;
+  static const Color _accentBlue = Color(0xFFD6EBFB);
+  static const Color _accentGreen = Color.fromARGB(255, 101, 219, 176);
+  static const Color _accentOrange = Color.fromARGB(255, 240, 168, 86);
 
   const _SubjectTile({
     required this.title,
@@ -176,7 +179,7 @@ class _SubjectTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(
-          color: _surface,
+          color: _accentBlue,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -204,7 +207,7 @@ class _SubjectTile extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: _primary.withOpacity(0.12),
+                color: _accentGreen,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(Icons.menu_book, color: _primary),
@@ -227,7 +230,7 @@ class _SubjectTile extends StatelessWidget {
                     subtitle,
                     style: TextStyle(
                       fontSize: 12,
-                      color: _textDark.withOpacity(0.6),
+                      color: _textDark.withOpacity(0.7),
                     ),
                   ),
                 ],

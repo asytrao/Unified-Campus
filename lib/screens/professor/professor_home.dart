@@ -71,13 +71,18 @@ class _ProfessorHomePageState extends State<ProfessorHomePage> {
   static const Color _primary = Color(0xFF2EC4B6); // teal to match app_name
   static const Color _textDark = Color(0xFF2C3E50);
   static const Color _surface = Colors.white;
-  static const Color _background = Color(0xFFF5F7FA);
+  static const Color _background = Color(0xFFF0F2F5);
+  static const Color _accentBlue = Color(0xFFD6EBFB);
+  static const Color _accentGreen = Color(0xFFCFF3E6);
+  static const Color _accentOrange = Color(0xFFFBE3C8);
+  static const Color _accentBeige = Color(0xFFEEDFCC);
 
   Widget _cardTile({
     required String title,
     String? subtitle,
     required IconData icon,
     required VoidCallback onTap,
+    Color? backgroundColor,
   }) {
     return InkWell(
       onTap: onTap,
@@ -86,7 +91,7 @@ class _ProfessorHomePageState extends State<ProfessorHomePage> {
         margin: const EdgeInsets.symmetric(vertical: 8),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: _surface,
+          color: backgroundColor ?? _surface,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -283,6 +288,9 @@ class _ProfessorHomePageState extends State<ProfessorHomePage> {
                     title: year,
                     subtitle: isCurrent ? 'Current academic year' : 'Archived',
                     icon: Icons.calendar_today,
+                    backgroundColor: isCurrent
+                        ? _accentGreen
+                        : (index % 2 == 0 ? _accentBeige : _accentBlue),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -308,6 +316,7 @@ class _ProfessorHomePageState extends State<ProfessorHomePage> {
                   title: 'Subject Manager',
                   subtitle: 'Create and organize subjects',
                   icon: Icons.menu_book,
+                  backgroundColor: _accentOrange,
                   onTap: () {
                     Navigator.push(
                       context,
