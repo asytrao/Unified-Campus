@@ -159,12 +159,12 @@ class _SubjectTile extends StatelessWidget {
   final String subtitle;
   final VoidCallback onTap;
 
-  static const Color _primary = Color.fromARGB(255, 90, 237, 223);
+  static const Color _primary = Color(0xFF2EC4B6);
   static const Color _textDark = Color(0xFF2C3E50);
   static const Color _surface = Colors.white;
   static const Color _accentBlue = Color(0xFFD6EBFB);
-  static const Color _accentGreen = Color.fromARGB(255, 101, 219, 176);
-  static const Color _accentOrange = Color.fromARGB(255, 240, 168, 86);
+  static const Color _accentGreen = Color(0xFFCFF3E6);
+  static const Color _accentOrange = Color(0xFFFBE3C8);
 
   const _SubjectTile({
     required this.title,

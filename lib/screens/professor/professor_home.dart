@@ -44,25 +44,38 @@ class _ProfessorHomePageState extends State<ProfessorHomePage> {
       department = data['department'];
 
       // Fetch years for this department
-      final deptDoc = await _firestore
-          .collection('departments')
-          .doc(department)
-          .get();
       List<String> customYears = [];
-      if (deptDoc.exists) {
-        final deptData = deptDoc.data() as Map<String, dynamic>;
-        customYears = List<String>.from(deptData['years'] ?? []);
+      if (department != null) {
+        try {
+          final deptDoc = await _firestore
+              .collection('departments')
+              .doc(department)
+              .get();
+
+          if (deptDoc.exists) {
+            final deptData = deptDoc.data() as Map<String, dynamic>;
+            customYears = List<String>.from(deptData['years'] ?? []);
+          }
+        } catch (deptError) {
+          print("Warning: Could not fetch department data: $deptError");
+          // Don't show error to user, just use default years
+          customYears = [];
+        }
       }
+
       // Merge default and custom years, avoiding duplicates
       years = [
         ...defaultYears,
         ...customYears.where((y) => !defaultYears.contains(y)),
       ];
     } catch (e) {
-      print("Error: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error loading professor data: $e")),
-      );
+      print("Error loading professor data: $e");
+      // Only show error if it's a critical error (not just department fetch failure)
+      if (name == null || email == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error loading professor data: $e")),
+        );
+      }
     } finally {
       setState(() => loading = false);
     }
@@ -95,8 +108,10 @@ class _ProfessorHomePageState extends State<ProfessorHomePage> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
+              color: Colors.black.withOpacity(
+                backgroundColor != null ? 0.08 : 0.05,
+              ),
+              blurRadius: backgroundColor != null ? 12 : 10,
               offset: const Offset(0, 4),
             ),
           ],
@@ -323,7 +338,7 @@ class _ProfessorHomePageState extends State<ProfessorHomePage> {
                       MaterialPageRoute(
                         builder: (context) => const SubjectManagerPage(),
                       ),
-                    );
+                    ).then((_) => loadProfessorData());
                   },
                 ),
 
