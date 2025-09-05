@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'subject_details_page.dart';
+import 'professor_communities_page.dart';
 
 class SubjectListPage extends StatefulWidget {
   final String year;
@@ -112,10 +113,30 @@ class _SubjectListPageState extends State<SubjectListPage> {
 
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                  itemCount: subjects.length,
+                  itemCount: subjects.length + 1, // +1 for communities card
                   separatorBuilder: (_, __) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
-                    final subjectDoc = subjects[index];
+                    // Communities card at the top
+                    if (index == 0) {
+                      return _CommunitiesCard(
+                        year: widget.year,
+                        department: widget.department,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ProfessorCommunitiesPage(
+                                year: widget.year,
+                                department: widget.department,
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    }
+
+                    // Subject tiles
+                    final subjectDoc = subjects[index - 1];
                     final subjectData =
                         subjectDoc.data() as Map<String, dynamic>;
                     final subjectName =
@@ -161,10 +182,8 @@ class _SubjectTile extends StatelessWidget {
 
   static const Color _primary = Color(0xFF2EC4B6);
   static const Color _textDark = Color(0xFF2C3E50);
-  static const Color _surface = Colors.white;
   static const Color _accentBlue = Color(0xFFD6EBFB);
   static const Color _accentGreen = Color(0xFFCFF3E6);
-  static const Color _accentOrange = Color(0xFFFBE3C8);
 
   const _SubjectTile({
     required this.title,
@@ -228,6 +247,95 @@ class _SubjectTile extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _textDark.withOpacity(0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.only(right: 12),
+              child: Icon(Icons.chevron_right, color: Colors.grey),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CommunitiesCard extends StatelessWidget {
+  final String year;
+  final String department;
+  final VoidCallback onTap;
+
+  static const Color _textDark = Color(0xFF2C3E50);
+  static const Color _accentPurple = Color(0xFFE8D5F2);
+
+  const _CommunitiesCard({
+    required this.year,
+    required this.department,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: _accentPurple,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 6,
+              height: 64,
+              decoration: BoxDecoration(
+                color: const Color(0xFF9B59B6),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  bottomLeft: Radius.circular(16),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: const Color(0xFF9B59B6).withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.groups, color: Color(0xFF9B59B6)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Communities',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: _textDark,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Connect with $department $year students',
                     style: TextStyle(
                       fontSize: 12,
                       color: _textDark.withOpacity(0.7),

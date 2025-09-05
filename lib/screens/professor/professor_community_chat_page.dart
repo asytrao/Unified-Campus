@@ -2,32 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-class CommunityChatPage extends StatefulWidget {
+class ProfessorCommunityChatPage extends StatefulWidget {
   final String communityId;
   final String communityName;
 
-  const CommunityChatPage({
+  const ProfessorCommunityChatPage({
     super.key,
     required this.communityId,
     required this.communityName,
   });
 
   @override
-  State<CommunityChatPage> createState() => _CommunityChatPageState();
+  State<ProfessorCommunityChatPage> createState() =>
+      _ProfessorCommunityChatPageState();
 }
 
-class _CommunityChatPageState extends State<CommunityChatPage> {
+class _ProfessorCommunityChatPageState
+    extends State<ProfessorCommunityChatPage> {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
 
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  // Lighter theme constants
+  // Design constants matching other professor pages
   static const Color _primary = Color(0xFF2EC4B6);
   static const Color _textDark = Color(0xFF2C3E50);
   static const Color _surface = Colors.white;
-  static const Color _background = Color(0xFFF0F2F5);
+  static const Color _accentBlue = Color(0xFFD6EBFB);
 
   @override
   void initState() {
@@ -67,7 +69,7 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
           'text': text,
           'senderId': user.uid,
           'senderName': userData['name'] ?? 'Unknown',
-          'senderRole': userData['role'] ?? 'student',
+          'senderRole': userData['role'] ?? 'professor',
           'createdAt': FieldValue.serverTimestamp(),
         });
 
@@ -92,7 +94,7 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
         .orderBy('createdAt', descending: true);
 
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: const Color(0xFFF0F2F5),
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -125,12 +127,9 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
                       fontSize: 18,
                     ),
                   ),
-                  Text(
+                  const Text(
                     "Community Chat",
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: _textDark.withOpacity(0.7),
-                    ),
+                    style: TextStyle(fontSize: 12, color: _textDark),
                   ),
                 ],
               ),
@@ -169,13 +168,13 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
                           width: 80,
                           height: 80,
                           decoration: BoxDecoration(
-                            color: _surface,
+                            color: _accentBlue,
                             borderRadius: BorderRadius.circular(20),
                           ),
                           child: Icon(
                             Icons.chat_bubble_outline_rounded,
                             size: 40,
-                            color: _textDark.withOpacity(0.5),
+                            color: _primary,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -241,7 +240,7 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: _background,
+                      color: const Color(0xFFF0F2F5),
                       borderRadius: BorderRadius.circular(24),
                       border: Border.all(
                         color: _textDark.withOpacity(0.1),
@@ -250,10 +249,10 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
                     ),
                     child: TextField(
                       controller: _messageController,
-                      style: TextStyle(color: _textDark),
-                      decoration: InputDecoration(
+                      style: const TextStyle(color: _textDark),
+                      decoration: const InputDecoration(
                         hintText: "Type a message...",
-                        hintStyle: TextStyle(color: _textDark.withOpacity(0.5)),
+                        hintStyle: TextStyle(color: _textDark),
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.symmetric(
                           horizontal: 20,
@@ -302,7 +301,7 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: _textDark.withOpacity(0.5),
+                color: _textDark.withOpacity(0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -330,14 +329,14 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
               ),
             ),
             const SizedBox(height: 8),
-            Text(
+            const Text(
               "Community Chat",
-              style: TextStyle(fontSize: 14, color: _textDark.withOpacity(0.7)),
+              style: TextStyle(fontSize: 14, color: _textDark),
             ),
             const SizedBox(height: 20),
-            Text(
-              "This is a community chat where you can connect with your classmates and professors.",
-              style: TextStyle(fontSize: 14, color: _textDark.withOpacity(0.7)),
+            const Text(
+              "This is a community chat where you can connect with your students and colleagues.",
+              style: TextStyle(fontSize: 14, color: _textDark),
               textAlign: TextAlign.center,
             ),
           ],
@@ -358,6 +357,7 @@ class _MessageBubble extends StatelessWidget {
   static const Color _primary = Color(0xFF2EC4B6);
   static const Color _textDark = Color(0xFF2C3E50);
   static const Color _surface = Colors.white;
+  static const Color _accentBlue = Color(0xFFD6EBFB);
 
   const _MessageBubble({
     required this.text,
@@ -378,8 +378,8 @@ class _MessageBubble extends StatelessWidget {
             height: 32,
             decoration: BoxDecoration(
               color: senderRole == 'professor'
-                  ? const Color(0xFFE67E22).withOpacity(0.2)
-                  : const Color(0xFF4A90E2).withOpacity(0.2),
+                  ? const Color(0xFFFBE3C8)
+                  : _accentBlue,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Center(
@@ -388,7 +388,7 @@ class _MessageBubble extends StatelessWidget {
                 style: TextStyle(
                   color: senderRole == 'professor'
                       ? const Color(0xFFE67E22)
-                      : const Color(0xFF4A90E2),
+                      : _primary,
                   fontWeight: FontWeight.w600,
                   fontSize: 14,
                 ),
@@ -411,9 +411,13 @@ class _MessageBubble extends StatelessWidget {
                 bottomLeft: Radius.circular(isMe ? 20 : 4),
                 bottomRight: Radius.circular(isMe ? 4 : 20),
               ),
-              border: isMe
-                  ? null
-                  : Border.all(color: _textDark.withOpacity(0.1), width: 1),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -426,7 +430,7 @@ class _MessageBubble extends StatelessWidget {
                         style: TextStyle(
                           color: senderRole == 'professor'
                               ? const Color(0xFFE67E22)
-                              : const Color(0xFF4A90E2),
+                              : _primary,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -439,7 +443,7 @@ class _MessageBubble extends StatelessWidget {
                             vertical: 1,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFE67E22).withOpacity(0.2),
+                            color: const Color(0xFFFBE3C8),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Text(
@@ -488,12 +492,8 @@ class _MessageBubble extends StatelessWidget {
               color: _primary.withOpacity(0.2),
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Center(
-              child: const Icon(
-                Icons.person_rounded,
-                color: _primary,
-                size: 16,
-              ),
+            child: const Center(
+              child: Icon(Icons.person_rounded, color: _primary, size: 16),
             ),
           ),
         ],

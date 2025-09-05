@@ -1,27 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'community_chat_page.dart';
+import 'professor_community_chat_page.dart';
 
-class CommunitiesPage extends StatefulWidget {
-  const CommunitiesPage({super.key});
+class ProfessorCommunitiesPage extends StatefulWidget {
+  final String year;
+  final String department;
+
+  const ProfessorCommunitiesPage({
+    super.key,
+    required this.year,
+    required this.department,
+  });
 
   @override
-  State<CommunitiesPage> createState() => _CommunitiesPageState();
+  State<ProfessorCommunitiesPage> createState() =>
+      _ProfessorCommunitiesPageState();
 }
 
-class _CommunitiesPageState extends State<CommunitiesPage> {
+class _ProfessorCommunitiesPageState extends State<ProfessorCommunitiesPage> {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
 
-  String? department, year, uid;
+  String? uid;
   bool loading = true;
 
-  // Lighter theme constants
+  // Design constants matching other professor pages
   static const Color _primary = Color(0xFF2EC4B6);
   static const Color _textDark = Color(0xFF2C3E50);
   static const Color _surface = Colors.white;
   static const Color _background = Color(0xFFF0F2F5);
+  static const Color _accentBlue = Color(0xFFD6EBFB);
 
   @override
   void initState() {
@@ -31,16 +40,9 @@ class _CommunitiesPageState extends State<CommunitiesPage> {
 
   Future<void> loadUserData() async {
     try {
-      final userDoc = await _firestore
-          .collection('users')
-          .doc(_auth.currentUser!.uid)
-          .get();
-      final data = userDoc.data()!;
       uid = _auth.currentUser!.uid;
-      department = data['department'];
-      year = data['year'];
 
-      // ensure class group exists
+      // Ensure class group exists
       await createClassGroupIfNotExists();
 
       setState(() => loading = false);
@@ -53,9 +55,7 @@ class _CommunitiesPageState extends State<CommunitiesPage> {
   }
 
   Future<void> createClassGroupIfNotExists() async {
-    if (department == null || year == null) return;
-
-    final groupId = "${department!.trim()}_${year!.trim()}";
+    final groupId = "${widget.department.trim()}_${widget.year.trim()}";
     final groupRef = _firestore.collection('communities').doc(groupId);
 
     final snapshot = await groupRef.get();
@@ -64,7 +64,7 @@ class _CommunitiesPageState extends State<CommunitiesPage> {
       final professorsSnapshot = await _firestore
           .collection('users')
           .where('role', isEqualTo: 'professor')
-          .where('department', isEqualTo: department)
+          .where('department', isEqualTo: widget.department)
           .get();
 
       final admins = professorsSnapshot.docs.map((doc) => doc.id).toList();
@@ -73,26 +73,22 @@ class _CommunitiesPageState extends State<CommunitiesPage> {
       final studentsSnapshot = await _firestore
           .collection('users')
           .where('role', isEqualTo: 'student')
-          .where('department', isEqualTo: department)
-          .where('year', isEqualTo: year)
+          .where('department', isEqualTo: widget.department)
+          .where('year', isEqualTo: widget.year)
           .get();
 
       final members = studentsSnapshot.docs.map((doc) => doc.id).toList();
 
       await groupRef.set({
-        'name': "$department $year Class Group",
-        'department': department,
-        'year': year,
+        'name': "${widget.department} ${widget.year} Class Group",
+        'department': widget.department,
+        'year': widget.year,
         'createdAt': FieldValue.serverTimestamp(),
         'isClassGroup': true,
         'members': members,
         'admins': admins,
-        'description': 'Official class group for $department $year students',
-      });
-    } else {
-      // Add current user to members if not already there
-      await groupRef.update({
-        'members': FieldValue.arrayUnion([uid]),
+        'description':
+            'Official class group for ${widget.department} ${widget.year} students',
       });
     }
   }
@@ -114,20 +110,20 @@ class _CommunitiesPageState extends State<CommunitiesPage> {
           children: [
             TextField(
               controller: nameController,
-              style: TextStyle(color: _textDark),
-              decoration: InputDecoration(
+              style: const TextStyle(color: _textDark),
+              decoration: const InputDecoration(
                 labelText: "Community name",
-                labelStyle: TextStyle(color: _textDark.withOpacity(0.7)),
+                labelStyle: TextStyle(color: _textDark),
                 border: OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: descController,
-              style: TextStyle(color: _textDark),
-              decoration: InputDecoration(
+              style: const TextStyle(color: _textDark),
+              decoration: const InputDecoration(
                 labelText: "Description (optional)",
-                labelStyle: TextStyle(color: _textDark.withOpacity(0.7)),
+                labelStyle: TextStyle(color: _textDark),
                 border: OutlineInputBorder(),
               ),
               maxLines: 2,
@@ -136,10 +132,7 @@ class _CommunitiesPageState extends State<CommunitiesPage> {
         ),
         actions: [
           TextButton(
-            child: Text(
-              "Cancel",
-              style: TextStyle(color: _textDark.withOpacity(0.7)),
-            ),
+            child: const Text("Cancel", style: TextStyle(color: _textDark)),
             onPressed: () => Navigator.pop(context),
           ),
           ElevatedButton(
@@ -156,13 +149,15 @@ class _CommunitiesPageState extends State<CommunitiesPage> {
                   'members': [uid],
                   'admins': [uid],
                   'createdBy': uid,
+                  'department': widget.department,
+                  'year': widget.year,
                 });
                 Navigator.pop(context);
                 // Navigate directly to chat
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (_) => CommunityChatPage(
+                    builder: (_) => ProfessorCommunityChatPage(
                       communityId: docRef.id,
                       communityName: name,
                     ),
@@ -191,10 +186,7 @@ class _CommunitiesPageState extends State<CommunitiesPage> {
               const SizedBox(height: 16),
               Text(
                 'Loading communities...',
-                style: TextStyle(
-                  color: _textDark.withOpacity(0.7),
-                  fontSize: 16,
-                ),
+                style: TextStyle(color: _textDark, fontSize: 16),
               ),
             ],
           ),
@@ -220,8 +212,8 @@ class _CommunitiesPageState extends State<CommunitiesPage> {
               ),
             ),
             Text(
-              '$year • $department',
-              style: TextStyle(fontSize: 12, color: _textDark.withOpacity(0.7)),
+              '${widget.year} • ${widget.department}',
+              style: TextStyle(fontSize: 12, color: _textDark.withOpacity(0.6)),
             ),
           ],
         ),
@@ -265,13 +257,13 @@ class _CommunitiesPageState extends State<CommunitiesPage> {
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                      color: _surface,
+                      color: _accentBlue,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Icon(
                       Icons.groups_outlined,
                       size: 40,
-                      color: _textDark.withOpacity(0.5),
+                      color: _primary,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -370,7 +362,7 @@ class _CommunitiesPageState extends State<CommunitiesPage> {
                                   ),
                                 ),
                                 const Text(
-                                  "Connect with classmates",
+                                  "Connect with students",
                                   style: TextStyle(
                                     fontSize: 24,
                                     color: Colors.white,
@@ -431,7 +423,7 @@ class _CommunitiesPageState extends State<CommunitiesPage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => CommunityChatPage(
+                            builder: (_) => ProfessorCommunityChatPage(
                               communityId: communityId,
                               communityName: name,
                             ),
@@ -458,6 +450,11 @@ class _CommunityCard extends StatelessWidget {
   final int memberCount;
   final VoidCallback onTap;
 
+  static const Color _primary = Color(0xFF2EC4B6);
+  static const Color _textDark = Color(0xFF2C3E50);
+  static const Color _surface = Colors.white;
+  static const Color _accentBlue = Color(0xFFD6EBFB);
+
   const _CommunityCard({
     required this.name,
     required this.description,
@@ -474,9 +471,15 @@ class _CommunityCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
+          color: isClassGroup ? _accentBlue : const Color(0xFFE8D5F2),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF2A2A2A), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           children: [
@@ -485,15 +488,13 @@ class _CommunityCard extends StatelessWidget {
               height: 56,
               decoration: BoxDecoration(
                 color: isClassGroup
-                    ? const Color(0xFF4A90E2).withOpacity(0.2)
+                    ? _primary.withOpacity(0.2)
                     : const Color(0xFF9B59B6).withOpacity(0.2),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(
                 isClassGroup ? Icons.school_rounded : Icons.groups_rounded,
-                color: isClassGroup
-                    ? const Color(0xFF4A90E2)
-                    : const Color(0xFF9B59B6),
+                color: isClassGroup ? _primary : const Color(0xFF9B59B6),
                 size: 28,
               ),
             ),
@@ -507,7 +508,7 @@ class _CommunityCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFFFFFFFF),
+                      color: _textDark,
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -520,7 +521,7 @@ class _CommunityCard extends StatelessWidget {
                         ),
                         decoration: BoxDecoration(
                           color: isClassGroup
-                              ? const Color(0xFF4A90E2).withOpacity(0.2)
+                              ? _primary.withOpacity(0.2)
                               : const Color(0xFF9B59B6).withOpacity(0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -528,7 +529,7 @@ class _CommunityCard extends StatelessWidget {
                           isClassGroup ? "Class Group" : "Community",
                           style: TextStyle(
                             color: isClassGroup
-                                ? const Color(0xFF4A90E2)
+                                ? _primary
                                 : const Color(0xFF9B59B6),
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -539,14 +540,14 @@ class _CommunityCard extends StatelessWidget {
                       Icon(
                         Icons.people_rounded,
                         size: 14,
-                        color: const Color(0xFFB0B0B0),
+                        color: _textDark.withOpacity(0.7),
                       ),
                       const SizedBox(width: 4),
                       Text(
                         '$memberCount members',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: Color(0xFFB0B0B0),
+                          color: _textDark.withOpacity(0.7),
                         ),
                       ),
                     ],
@@ -555,9 +556,9 @@ class _CommunityCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       description,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
-                        color: Color(0xFFB0B0B0),
+                        color: _textDark.withOpacity(0.7),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -570,12 +571,19 @@ class _CommunityCard extends StatelessWidget {
               width: 36,
               height: 36,
               decoration: BoxDecoration(
-                color: const Color(0xFF2A2A2A),
+                color: _surface,
                 borderRadius: BorderRadius.circular(10),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: const Icon(
                 Icons.arrow_forward_ios_rounded,
-                color: Color(0xFFB0B0B0),
+                color: _textDark,
                 size: 18,
               ),
             ),
