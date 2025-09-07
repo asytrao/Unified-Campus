@@ -246,9 +246,24 @@ class _ProfessorCommunitiesPageState extends State<ProfessorCommunitiesPage> {
               ),
             );
           }
-          final communities = snapshot.data!.docs;
+          final allCommunities = snapshot.data!.docs;
 
-          if (communities.isEmpty) {
+          // Filter out the default class group for this department and year
+          final filteredCommunities = allCommunities.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final isClassGroup = data['isClassGroup'] ?? false;
+            final dept = data['department'] ?? '';
+            final yr = data['year'] ?? '';
+            // Exclude if it's the class group for this professor's department and year
+            if (isClassGroup &&
+                dept == widget.department &&
+                yr == widget.year) {
+              return false;
+            }
+            return true;
+          }).toList();
+
+          if (filteredCommunities.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -393,7 +408,7 @@ class _ProfessorCommunitiesPageState extends State<ProfessorCommunitiesPage> {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      'Communities (${communities.length})',
+                      'Communities (${filteredCommunities.length})',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w700,
@@ -404,7 +419,7 @@ class _ProfessorCommunitiesPageState extends State<ProfessorCommunitiesPage> {
                 ),
                 const SizedBox(height: 16),
 
-                ...communities.map((doc) {
+                ...filteredCommunities.map((doc) {
                   final data = doc.data() as Map<String, dynamic>;
                   final communityId = doc.id;
                   final name = data['name'] ?? "Unnamed Community";

@@ -23,11 +23,11 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  // Lighter theme constants
+  // Dark theme constants
   static const Color _primary = Color(0xFF2EC4B6);
-  static const Color _textDark = Color(0xFF2C3E50);
-  static const Color _surface = Colors.white;
-  static const Color _background = Color(0xFFF0F2F5);
+  static const Color _textDark = Colors.white;
+  static const Color _surface = Color(0xFF1A1A1A);
+  static const Color _background = Color(0xFF121212);
 
   @override
   void initState() {
@@ -286,61 +286,119 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
     );
   }
 
-  void _showCommunityInfo() {
+void _showCommunityInfo() async {
+    final communityDoc = await _firestore.collection('communities').doc(widget.communityId).get();
+    final data = communityDoc.data() ?? {};
+
+    final members = data['members'] as Map<String, dynamic>? ?? {};
+    final admins = data['admins'] as Map<String, dynamic>? ?? {};
+
+    final memberIds = members.keys.toList();
+    final adminIds = admins.keys.toList();
+
+    // Fetch user details for members and admins
+    final memberDocs = await Future.wait(memberIds.map((id) => _firestore.collection('users').doc(id).get()));
+    final adminDocs = await Future.wait(adminIds.map((id) => _firestore.collection('users').doc(id).get()));
+
     showModalBottomSheet(
       context: context,
       backgroundColor: _surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: _textDark.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(2),
+      isScrollControlled: true,
+      builder: (context) => DraggableScrollableSheet(
+        expand: false,
+        builder: (context, scrollController) => Container(
+          padding: const EdgeInsets.all(20),
+          child: ListView(
+            controller: scrollController,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: _textDark.withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: _primary.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(20),
+              const SizedBox(height: 20),
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: _primary.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Icon(
+                  Icons.groups_rounded,
+                  color: _primary,
+                  size: 40,
+                ),
               ),
-              child: const Icon(
-                Icons.groups_rounded,
-                color: _primary,
-                size: 40,
+              const SizedBox(height: 16),
+              Text(
+                widget.communityName,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: _textDark,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              widget.communityName,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: _textDark,
+              const SizedBox(height: 8),
+              Text(
+                "Community Chat",
+                style: TextStyle(fontSize: 14, color: _textDark.withOpacity(0.7)),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              "Community Chat",
-              style: TextStyle(fontSize: 14, color: _textDark.withOpacity(0.7)),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              "This is a community chat where you can connect with your classmates and professors.",
-              style: TextStyle(fontSize: 14, color: _textDark.withOpacity(0.7)),
-              textAlign: TextAlign.center,
-            ),
-          ],
+              const SizedBox(height: 20),
+              Text(
+                "Members",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: _textDark,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...memberDocs.map((doc) {
+                final userData = doc.data() ?? {};
+                final name = userData['name'] ?? 'Unknown';
+                final role = userData['role'] ?? 'student';
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: role == 'professor' ? Colors.orange.withOpacity(0.3) : Colors.blue.withOpacity(0.3),
+                    child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?'),
+                  ),
+                  title: Text(name),
+                  subtitle: Text(role),
+                );
+              }),
+              const SizedBox(height: 20),
+              Text(
+                "Admins",
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: _textDark,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ...adminDocs.map((doc) {
+                final userData = doc.data() ?? {};
+                final name = userData['name'] ?? 'Unknown';
+                final role = userData['role'] ?? 'student';
+                return ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: role == 'professor' ? Colors.orange.withOpacity(0.3) : Colors.blue.withOpacity(0.3),
+                    child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?'),
+                  ),
+                  title: Text(name),
+                  subtitle: Text(role),
+                );
+              }),
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );
@@ -356,8 +414,8 @@ class _MessageBubble extends StatelessWidget {
   final DateTime? timestamp;
 
   static const Color _primary = Color(0xFF2EC4B6);
-  static const Color _textDark = Color(0xFF2C3E50);
-  static const Color _surface = Colors.white;
+  static const Color _textDark = Colors.white;
+  static const Color _surface = Color(0xFF1A1A1A);
 
   const _MessageBubble({
     required this.text,

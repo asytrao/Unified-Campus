@@ -17,11 +17,11 @@ class _CommunitiesPageState extends State<CommunitiesPage> {
   String? department, year, uid;
   bool loading = true;
 
-  // Lighter theme constants
-  static const Color _primary = Color(0xFF2EC4B6);
-  static const Color _textDark = Color(0xFF2C3E50);
-  static const Color _surface = Colors.white;
-  static const Color _background = Color(0xFFF0F2F5);
+  // Dark theme constants (match student_home.dart)
+  static const Color _primary = Color(0xFF00D4AA);
+  static const Color _textDark = Color(0xFFFFFFFF);
+  static const Color _surface = Color(0xFF1A1A1A);
+  static const Color _background = Color(0xFF0A0A0A);
 
   @override
   void initState() {
@@ -325,7 +325,7 @@ class _CommunitiesPageState extends State<CommunitiesPage> {
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [_primary, const Color(0xFF26A69A)],
+                      colors: [_primary, Color(0xFF00B894)], // _primaryDark
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
