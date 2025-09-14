@@ -97,50 +97,53 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
         elevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: _textDark,
-        title: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: _primary.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
+        title: GestureDetector(
+          onTap: _showCommunityInfo,
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: _primary.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.groups_rounded,
+                  color: _primary,
+                  size: 20,
+                ),
               ),
-              child: const Icon(
-                Icons.groups_rounded,
-                color: _primary,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.communityName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: _textDark,
-                      fontSize: 18,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.communityName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: _textDark,
+                        fontSize: 18,
+                      ),
                     ),
-                  ),
-                  Text(
-                    "Community Chat",
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: _textDark.withOpacity(0.7),
+                    Text(
+                      "Community Chat",
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _textDark.withOpacity(0.7),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.info_outline_rounded),
-            onPressed: () => _showCommunityInfo(),
+            onPressed: _showCommunityInfo,
           ),
         ],
       ),
@@ -286,8 +289,11 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
     );
   }
 
-void _showCommunityInfo() async {
-    final communityDoc = await _firestore.collection('communities').doc(widget.communityId).get();
+  void _showCommunityInfo() async {
+    final communityDoc = await _firestore
+        .collection('communities')
+        .doc(widget.communityId)
+        .get();
     final data = communityDoc.data() ?? {};
 
     final members = data['members'] as Map<String, dynamic>? ?? {};
@@ -297,8 +303,12 @@ void _showCommunityInfo() async {
     final adminIds = admins.keys.toList();
 
     // Fetch user details for members and admins
-    final memberDocs = await Future.wait(memberIds.map((id) => _firestore.collection('users').doc(id).get()));
-    final adminDocs = await Future.wait(adminIds.map((id) => _firestore.collection('users').doc(id).get()));
+    final memberDocs = await Future.wait(
+      memberIds.map((id) => _firestore.collection('users').doc(id).get()),
+    );
+    final adminDocs = await Future.wait(
+      adminIds.map((id) => _firestore.collection('users').doc(id).get()),
+    );
 
     showModalBottomSheet(
       context: context,
@@ -348,7 +358,10 @@ void _showCommunityInfo() async {
               const SizedBox(height: 8),
               Text(
                 "Community Chat",
-                style: TextStyle(fontSize: 14, color: _textDark.withOpacity(0.7)),
+                style: TextStyle(
+                  fontSize: 14,
+                  color: _textDark.withOpacity(0.7),
+                ),
               ),
               const SizedBox(height: 20),
               Text(
@@ -366,7 +379,9 @@ void _showCommunityInfo() async {
                 final role = userData['role'] ?? 'student';
                 return ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: role == 'professor' ? Colors.orange.withOpacity(0.3) : Colors.blue.withOpacity(0.3),
+                    backgroundColor: role == 'professor'
+                        ? Colors.orange.withOpacity(0.3)
+                        : Colors.blue.withOpacity(0.3),
                     child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?'),
                   ),
                   title: Text(name),
@@ -389,7 +404,9 @@ void _showCommunityInfo() async {
                 final role = userData['role'] ?? 'student';
                 return ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: role == 'professor' ? Colors.orange.withOpacity(0.3) : Colors.blue.withOpacity(0.3),
+                    backgroundColor: role == 'professor'
+                        ? Colors.orange.withOpacity(0.3)
+                        : Colors.blue.withOpacity(0.3),
                     child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?'),
                   ),
                   title: Text(name),

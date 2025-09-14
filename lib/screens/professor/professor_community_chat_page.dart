@@ -99,47 +99,50 @@ class _ProfessorCommunityChatPageState
         elevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: _textDark,
-        title: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: _primary.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
+        title: GestureDetector(
+          onTap: _showCommunityInfo,
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: _primary.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.groups_rounded,
+                  color: _primary,
+                  size: 20,
+                ),
               ),
-              child: const Icon(
-                Icons.groups_rounded,
-                color: _primary,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.communityName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: _textDark,
-                      fontSize: 18,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.communityName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: _textDark,
+                        fontSize: 18,
+                      ),
                     ),
-                  ),
-                  const Text(
-                    "Community Chat",
-                    style: TextStyle(fontSize: 12, color: _textDark),
-                  ),
-                ],
+                    const Text(
+                      "Community Chat",
+                      style: TextStyle(fontSize: 12, color: _textDark),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.info_outline_rounded),
-            onPressed: () => _showCommunityInfo(),
+            onPressed: _showCommunityInfo,
           ),
         ],
       ),

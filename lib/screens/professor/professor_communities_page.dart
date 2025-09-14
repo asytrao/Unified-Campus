@@ -236,220 +236,219 @@ class _ProfessorCommunitiesPageState extends State<ProfessorCommunitiesPage> {
       body: StreamBuilder<QuerySnapshot>(
         stream: _firestore
             .collection('communities')
-            .where('members', arrayContains: uid)
+            .where('admins', arrayContains: uid)
             .snapshots(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(_primary),
-              ),
-            );
-          }
-          final allCommunities = snapshot.data!.docs;
+        builder: (context, adminSnapshot) {
+          return StreamBuilder<QuerySnapshot>(
+            stream: _firestore
+                .collection('communities')
+                .where('members', arrayContains: uid)
+                .snapshots(),
+            builder: (context, memberSnapshot) {
+              if (!adminSnapshot.hasData || !memberSnapshot.hasData) {
+                return Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(_primary),
+                  ),
+                );
+              }
+              // Merge both lists and remove duplicates
+              final adminDocs = adminSnapshot.data!.docs;
+              final memberDocs = memberSnapshot.data!.docs;
+              final allDocs = {
+                for (var doc in [...adminDocs, ...memberDocs]) doc.id: doc,
+              }.values.toList();
 
-          // Filter out the default class group for this department and year
-          final filteredCommunities = allCommunities.where((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            final isClassGroup = data['isClassGroup'] ?? false;
-            final dept = data['department'] ?? '';
-            final yr = data['year'] ?? '';
-            // Exclude if it's the class group for this professor's department and year
-            if (isClassGroup &&
-                dept == widget.department &&
-                yr == widget.year) {
-              return false;
-            }
-            return true;
-          }).toList();
-
-          if (filteredCommunities.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      color: _accentBlue,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Icon(
-                      Icons.groups_outlined,
-                      size: 40,
-                      color: _primary,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "No communities yet",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: _textDark,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Create your first community to get started",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: _textDark.withOpacity(0.7),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: createNewCommunity,
-                    icon: const Icon(Icons.add_rounded),
-                    label: const Text("Create Community"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
+              if (allDocs.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: _accentBlue,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Icon(
+                          Icons.groups_outlined,
+                          size: 40,
+                          color: _primary,
+                        ),
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                      const SizedBox(height: 16),
+                      Text(
+                        "No communities yet",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: _textDark,
+                        ),
                       ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header Section
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [_primary, const Color(0xFF26A69A)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _primary.withOpacity(0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
+                      const SizedBox(height: 8),
+                      Text(
+                        "Create your first community to get started",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: _textDark.withOpacity(0.7),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        onPressed: createNewCommunity,
+                        icon: const Icon(Icons.add_rounded),
+                        label: const Text("Create Community"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 50,
-                            height: 50,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(15),
-                            ),
-                            child: const Icon(
-                              Icons.groups_rounded,
-                              color: Colors.white,
-                              size: 28,
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Your Communities",
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.white.withOpacity(0.9),
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const Text(
-                                  "Connect with students",
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            ),
+                );
+              }
+
+              return SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header Section
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [_primary, const Color(0xFF26A69A)],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _primary.withOpacity(0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Communities List
-                Row(
-                  children: [
-                    Container(
-                      width: 4,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: _primary,
-                        borderRadius: BorderRadius.circular(2),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 50,
+                                height: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(15),
+                                ),
+                                child: const Icon(
+                                  Icons.groups_rounded,
+                                  color: Colors.white,
+                                  size: 28,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      "Your Communities",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.white.withOpacity(0.9),
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    const Text(
+                                      "Connect with students",
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Communities (${filteredCommunities.length})',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: _textDark,
-                      ),
+
+                    const SizedBox(height: 24),
+
+                    // Communities List
+                    Row(
+                      children: [
+                        Container(
+                          width: 4,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: _primary,
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Communities (${allDocs.length})',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w700,
+                            color: _textDark,
+                          ),
+                        ),
+                      ],
                     ),
+                    const SizedBox(height: 16),
+
+                    ...allDocs.map((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final communityId = doc.id;
+                      final name = data['name'] ?? "Unnamed Community";
+                      final isClassGroup = data['isClassGroup'] ?? false;
+                      final description = data['description'] ?? '';
+                      final memberCount =
+                          (data['members'] as List?)?.length ?? 0;
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        child: _CommunityCard(
+                          name: name,
+                          description: description,
+                          isClassGroup: isClassGroup,
+                          memberCount: memberCount,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => ProfessorCommunityChatPage(
+                                  communityId: communityId,
+                                  communityName: name,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    }),
                   ],
                 ),
-                const SizedBox(height: 16),
-
-                ...filteredCommunities.map((doc) {
-                  final data = doc.data() as Map<String, dynamic>;
-                  final communityId = doc.id;
-                  final name = data['name'] ?? "Unnamed Community";
-                  final isClassGroup = data['isClassGroup'] ?? false;
-                  final description = data['description'] ?? '';
-                  final memberCount = (data['members'] as List?)?.length ?? 0;
-
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: _CommunityCard(
-                      name: name,
-                      description: description,
-                      isClassGroup: isClassGroup,
-                      memberCount: memberCount,
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ProfessorCommunityChatPage(
-                              communityId: communityId,
-                              communityName: name,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  );
-                }),
-              ],
-            ),
+              );
+            },
           );
         },
       ),
