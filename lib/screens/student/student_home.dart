@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../auth/login_page.dart';
 import 'student_subject_options_page.dart';
 import 'communities_page.dart';
@@ -19,22 +20,20 @@ class _StudentHomePageState extends State<StudentHomePage> {
   String? name, email, department, year;
   bool loading = true;
 
-  // Color scheme from student_subject_options_page.dart
-  static const Color _primary = Color(0xFF00D4AA);
-  static const Color _primaryDark = Color(0xFF00B894);
-  static const Color _background = Color(0xFF0A0A0A);
-  static const Color _surface = Color(0xFF1A1A1A);
-  static const Color _surfaceVariant = Color(0xFF2A2A2A);
-  static const Color _textPrimary = Color(0xFFFFFFFF);
+  // Dark theme color scheme
+  static const Color _primary = Color(0xFF2EC4B6); // teal
+  static const Color _textPrimary = Colors.white;
   static const Color _textSecondary = Color(0xFFB0B0B0);
-  static const Color _accentBlue = Color(0xFF4A90E2);
-  static const Color _accentPurple = Color(0xFF9B59B6);
-  static const Color _accentOrange = Color(0xFFE67E22);
+  static const Color _surface = Color(0xFF1A1A1A);
+  static const Color _background = Color(0xFF121212);
+  static const Color _accentBlue = Color(0xFF3A7ADF);
+  static const Color _accentPurple = Color(0xFF8E44AD);
   static const Color _accentGreen = Color(0xFF27AE60);
 
   @override
   void initState() {
     super.initState();
+    saveDeviceToken(); // Save FCM token after login
     loadStudentData();
   }
 
@@ -102,6 +101,19 @@ class _StudentHomePageState extends State<StudentHomePage> {
     }
   }
 
+  Future<void> saveDeviceToken() async {
+    String? uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    String? fcmToken = await FirebaseMessaging.instance.getToken();
+    if (fcmToken != null) {
+      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+        'fcmToken': fcmToken,
+      });
+      print('✅ FCM Token saved: $fcmToken');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (loading || department == null || year == null) {
@@ -136,24 +148,9 @@ class _StudentHomePageState extends State<StudentHomePage> {
                         horizontal: 14,
                         vertical: 10,
                       ),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [_primary, _primaryDark],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _primary.withOpacity(0.18),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
                       child: Row(
                         children: const [
-                          Icon(Icons.school, color: Colors.white),
+                          Icon(Icons.school, color: _primary),
                           SizedBox(width: 8),
                           Text(
                             'Student Dashboard',
@@ -185,7 +182,7 @@ class _StudentHomePageState extends State<StudentHomePage> {
                           horizontal: 12,
                           vertical: 10,
                         ),
-                        backgroundColor: _surfaceVariant,
+                        backgroundColor: _surface,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -200,21 +197,10 @@ class _StudentHomePageState extends State<StudentHomePage> {
 
                 // Welcome card
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [_primary, _primaryDark],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _primary.withOpacity(0.3),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
+                    color: _surface,
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(
                     children: [
@@ -227,7 +213,7 @@ class _StudentHomePageState extends State<StudentHomePage> {
                               style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w700,
-                                color: Colors.white,
+                                color: _textPrimary,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -235,45 +221,22 @@ class _StudentHomePageState extends State<StudentHomePage> {
                               department != null && year != null
                                   ? '$year • $department'
                                   : '',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.8),
-                              ),
+                              style: TextStyle(color: _textSecondary),
                             ),
                           ],
                         ),
                       ),
                       CircleAvatar(
-                        radius: 24,
-                        backgroundColor: Colors.white.withOpacity(0.2),
-                        child: const Icon(Icons.person, color: Colors.white),
+                        radius: 20,
+                        backgroundColor: _primary.withOpacity(0.15),
+                        child: const Icon(Icons.person, color: _primary),
                       ),
                     ],
                   ),
                 ),
 
-                const SizedBox(height: 24),
-
-                Row(
-                  children: [
-                    Container(
-                      width: 4,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: _primary,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Your Subjects',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: _textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
+                const SizedBox(height: 16),
+                Text('Your Subjects', style: TextStyle(color: _textSecondary)),
 
                 const SizedBox(height: 16),
 
@@ -286,7 +249,7 @@ class _StudentHomePageState extends State<StudentHomePage> {
 
                     if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                       return Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
                           color: _surface,
                           borderRadius: BorderRadius.circular(16),
@@ -294,7 +257,7 @@ class _StudentHomePageState extends State<StudentHomePage> {
                         child: const Center(
                           child: Text(
                             "No subjects found.",
-                            style: TextStyle(color: _textPrimary),
+                            style: TextStyle(color: _textSecondary),
                           ),
                         ),
                       );
@@ -303,15 +266,19 @@ class _StudentHomePageState extends State<StudentHomePage> {
                     final subjects = snapshot.data!.docs;
 
                     return Column(
-                      children: subjects.map((doc) {
+                      children: subjects.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final doc = entry.value;
                         final data = doc.data() as Map<String, dynamic>;
                         final subjectName = data['name'] ?? 'Unknown';
 
-                        return _OptionCard(
+                        return _cardTile(
                           title: subjectName,
-                          subtitle: 'Subject Options',
-                          icon: Icons.menu_book_rounded,
-                          color: _accentBlue,
+                          subtitle: 'View assignments, notes, and queries',
+                          icon: Icons.menu_book,
+                          backgroundColor: index.isEven
+                              ? _accentBlue.withOpacity(0.1)
+                              : _accentPurple.withOpacity(0.1),
                           onTap: () {
                             Navigator.push(
                               context,
@@ -330,36 +297,15 @@ class _StudentHomePageState extends State<StudentHomePage> {
                   },
                 ),
 
-                const SizedBox(height: 24),
-
-                Row(
-                  children: [
-                    Container(
-                      width: 4,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        color: _primary,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Connect',
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: _textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
+                const SizedBox(height: 16),
+                Text('Connect', style: TextStyle(color: _textSecondary)),
 
                 const SizedBox(height: 16),
-                _OptionCard(
+                _cardTile(
                   title: 'Communities',
                   subtitle: 'Connect with your class',
                   icon: Icons.groups,
-                  color: _accentGreen,
+                  backgroundColor: _accentGreen.withOpacity(0.1),
                   onTap: () {
                     Navigator.push(
                       context,
@@ -376,49 +322,36 @@ class _StudentHomePageState extends State<StudentHomePage> {
       ),
     );
   }
-}
 
-// Reusable OptionCard widget (copied and adapted from student_subject_options_page.dart)
-class _OptionCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _OptionCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _cardTile({
+    required String title,
+    String? subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+    Color? backgroundColor,
+  }) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 8),
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
+          color: backgroundColor ?? _surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF2A2A2A), width: 1),
         ),
         child: Row(
           children: [
             Container(
-              width: 56,
-              height: 56,
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(16),
+                color: _primary.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: color, size: 28),
+              child: Icon(icon, color: _primary),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -426,35 +359,20 @@ class _OptionCard extends StatelessWidget {
                   Text(
                     title,
                     style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFFFFFFFF),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: _textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFFB0B0B0),
+                  if (subtitle != null)
+                    Text(
+                      subtitle,
+                      style: TextStyle(fontSize: 12, color: _textSecondary),
                     ),
-                  ),
                 ],
               ),
             ),
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: const Color(0xFF2A2A2A),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.arrow_forward_ios_rounded,
-                color: Color(0xFFB0B0B0),
-                size: 18,
-              ),
-            ),
+            const Icon(Icons.chevron_right, color: Colors.grey),
           ],
         ),
       ),

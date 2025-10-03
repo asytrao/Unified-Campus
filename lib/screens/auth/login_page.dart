@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 import '../student/student_home.dart';
 import '../professor/professor_home.dart';
@@ -47,11 +48,13 @@ class _LoginPageState extends State<LoginPage> {
       final role = data['role'];
 
       if (role == 'student') {
+        await saveDeviceToken();
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const StudentHomePage()),
         );
       } else if (role == 'professor') {
+        await saveDeviceToken();
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const ProfessorHomePage()),
@@ -65,6 +68,19 @@ class _LoginPageState extends State<LoginPage> {
       ).showSnackBar(SnackBar(content: Text("Login failed: ${e.toString()}")));
     } finally {
       setState(() => loading = false);
+    }
+  }
+
+  Future<void> saveDeviceToken() async {
+    String? uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    String? fcmToken = await FirebaseMessaging.instance.getToken();
+    if (fcmToken != null) {
+      await FirebaseFirestore.instance.collection('users').doc(uid).update({
+        'fcmToken': fcmToken,
+      });
+      print('✅ FCM Token saved: $fcmToken');
     }
   }
 

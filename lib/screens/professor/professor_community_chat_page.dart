@@ -289,62 +289,155 @@ class _ProfessorCommunityChatPageState
   }
 
   void _showCommunityInfo() {
+    final communityDoc = _firestore
+        .collection('communities')
+        .doc(widget.communityId)
+        .get();
+
     showModalBottomSheet(
       context: context,
       backgroundColor: _surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: _textDark.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: _primary.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Icon(
-                Icons.groups_rounded,
-                color: _primary,
-                size: 40,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              widget.communityName,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-                color: _textDark,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              "Community Chat",
-              style: TextStyle(fontSize: 14, color: _textDark),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              "This is a community chat where you can connect with your students and colleagues.",
-              style: TextStyle(fontSize: 14, color: _textDark),
-              textAlign: TextAlign.center,
-            ),
-          ],
+      isScrollControlled: true,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.6,
+          maxChildSize: 0.9,
+          builder: (context, scrollController) {
+            return FutureBuilder<DocumentSnapshot>(
+              future: communityDoc,
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                final data =
+                    snapshot.data!.data() as Map<String, dynamic>? ?? {};
+                final memberIds = List<String>.from(data['members'] ?? []);
+                final adminIds = List<String>.from(data['admins'] ?? []);
+
+                return Container(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 4,
+                        margin: const EdgeInsets.only(bottom: 20),
+                        decoration: BoxDecoration(
+                          color: _textDark.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: _primary.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Icon(
+                          Icons.groups_rounded,
+                          color: _primary,
+                          size: 40,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        widget.communityName,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: _textDark,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        data['description'] ?? "Community Chat",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: _textDark.withOpacity(0.7),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Expanded(
+                        child: ListView(
+                          controller: scrollController,
+                          children: [
+                            _buildUserList("Admins", adminIds),
+                            const SizedBox(height: 16),
+                            _buildUserList("Members", memberIds),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildUserList(String title, List<String> userIds) {
+    if (userIds.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "$title (${userIds.length})",
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: _textDark,
+          ),
         ),
-      ),
+        const SizedBox(height: 8),
+        FutureBuilder<List<DocumentSnapshot>>(
+          future: Future.wait(
+            userIds.map((id) => _firestore.collection('users').doc(id).get()),
+          ),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final userDocs = snapshot.data!;
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: userDocs.length,
+              itemBuilder: (context, index) {
+                final doc = userDocs[index];
+                final userData = doc.data() as Map<String, dynamic>? ?? {};
+                final name = userData['name'] ?? 'Unknown';
+                final role = userData['role'] ?? 'student';
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: CircleAvatar(
+                    backgroundColor: _primary.withOpacity(0.1),
+                    child: Text(
+                      name.isNotEmpty ? name[0].toUpperCase() : '?',
+                      style: const TextStyle(color: _primary),
+                    ),
+                  ),
+                  title: Text(name, style: const TextStyle(color: _textDark)),
+                  subtitle: Text(
+                    role,
+                    style: TextStyle(color: _textDark.withOpacity(0.7)),
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ],
     );
   }
 }
