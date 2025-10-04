@@ -180,10 +180,14 @@ class _ProfessorCommunitiesPageState extends State<ProfessorCommunitiesPage> {
   @override
   Widget build(BuildContext context) {
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    final communitiesStream = _firestore
+    final memberStream = _firestore
         .collection('communities')
-        .where('department', isEqualTo: widget.department)
-        .where('year', isEqualTo: widget.year)
+        .where('members', arrayContains: uid)
+        .snapshots();
+
+    final adminStream = _firestore
+        .collection('communities')
+        .where('admins', arrayContains: uid)
         .snapshots();
 
     if (loading) {
@@ -247,7 +251,7 @@ class _ProfessorCommunitiesPageState extends State<ProfessorCommunitiesPage> {
         ],
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream: communitiesStream,
+        stream: memberStream,
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return Center(
