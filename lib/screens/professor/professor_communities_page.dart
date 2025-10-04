@@ -236,12 +236,16 @@ class _ProfessorCommunitiesPageState extends State<ProfessorCommunitiesPage> {
       body: StreamBuilder<QuerySnapshot>(
         stream: _firestore
             .collection('communities')
+            .where('department', isEqualTo: widget.department)
+            .where('year', isEqualTo: widget.year)
             .where('admins', arrayContains: uid)
             .snapshots(),
         builder: (context, adminSnapshot) {
           return StreamBuilder<QuerySnapshot>(
             stream: _firestore
                 .collection('communities')
+                .where('department', isEqualTo: widget.department)
+                .where('year', isEqualTo: widget.year)
                 .where('members', arrayContains: uid)
                 .snapshots(),
             builder: (context, memberSnapshot) {
