@@ -28,7 +28,7 @@ class _StudentSubmissionsPageState extends State<StudentSubmissionsPage> {
 
   // Cloudinary details
   final String cloudName = "dzxbqfatf";
-  final String uploadPreset = "unisgned_preset";
+  final String uploadPreset = "unsigned_preset";
 
   late final CollectionReference contentCollection;
   late final String studentId;
@@ -71,7 +71,12 @@ class _StudentSubmissionsPageState extends State<StudentSubmissionsPage> {
     try {
       final result = await FilePicker.platform.pickFiles(type: FileType.any);
 
-      if (result == null || result.files.single.path == null) return;
+      if (result == null || result.files.single.path == null) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("No file selected.")));
+        return;
+      }
 
       final filePath = result.files.single.path!;
       final fileName = result.files.single.name;
@@ -83,8 +88,18 @@ class _StudentSubmissionsPageState extends State<StudentSubmissionsPage> {
       });
 
       // Upload to Cloudinary
+      final extension = fileName.split('.').last.toLowerCase();
+      final isImage = [
+        'jpg',
+        'jpeg',
+        'png',
+        'gif',
+        'bmp',
+        'webp',
+      ].contains(extension);
+
       final uri = Uri.parse(
-        "https://api.cloudinary.com/v1_1/$cloudName/auto/upload",
+        "https://api.cloudinary.com/v1_1/$cloudName/${isImage ? 'image' : 'raw'}/upload",
       );
       final request = http.MultipartRequest("POST", uri)
         ..fields['upload_preset'] = uploadPreset
@@ -94,7 +109,16 @@ class _StudentSubmissionsPageState extends State<StudentSubmissionsPage> {
 
       final response = await http.Response.fromStream(streamedResponse);
       if (response.statusCode != 200) {
-        throw Exception("Upload failed: ${response.body}");
+        final errorMsg =
+            json.decode(response.body)['error']?['message'] ?? "Upload failed";
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("❌ Upload failed: $errorMsg")));
+        setState(() {
+          _uploading = false;
+          _progress = 0.0;
+        });
+        return;
       }
 
       final responseData = json.decode(response.body);
@@ -106,9 +130,9 @@ class _StudentSubmissionsPageState extends State<StudentSubmissionsPage> {
           .collection('submissions')
           .doc(studentId)
           .set({
-            'fileName': fileName,
-            'fileUrl': downloadUrl,
             'submittedAt': FieldValue.serverTimestamp(),
+            'fileUrl': downloadUrl,
+            'fileName': fileName,
           }, SetOptions(merge: true));
 
       if (mounted) {
@@ -116,11 +140,10 @@ class _StudentSubmissionsPageState extends State<StudentSubmissionsPage> {
           _uploading = false;
           _progress = 0.0;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("✅ File uploaded successfully!")),
+        );
       }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("✅ Submission uploaded successfully")),
-      );
     } catch (e) {
       if (mounted) {
         setState(() {
