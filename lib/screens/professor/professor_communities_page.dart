@@ -91,16 +91,10 @@ class _ProfessorCommunitiesPageState extends State<ProfessorCommunitiesPage> {
             'Official class group for ${widget.department} ${widget.year} students',
       });
     } else {
-<<<<<<< HEAD
-      // Ensure current professor is added to admins if not already there
-      await groupRef.update({
-        'admins': FieldValue.arrayUnion([uid]),
-=======
       // Ensure current professor is added to admins and members if not already there
       await groupRef.update({
         'admins': FieldValue.arrayUnion([uid]),
-        'members': FieldValue.arrayUnion([uid]), // <-- Add this line
->>>>>>> 66b4c32a6266dc502f14353a4a8ab8dbb50ce6bd
+        'members': FieldValue.arrayUnion([uid]),
       });
     }
   }
@@ -186,15 +180,6 @@ class _ProfessorCommunitiesPageState extends State<ProfessorCommunitiesPage> {
   @override
   Widget build(BuildContext context) {
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    final memberStream = _firestore
-        .collection('communities')
-        .where('members', arrayContains: uid)
-        .snapshots();
-
-    final adminStream = _firestore
-        .collection('communities')
-        .where('admins', arrayContains: uid)
-        .snapshots();
 
     if (loading) {
       return Scaffold(
@@ -257,15 +242,11 @@ class _ProfessorCommunitiesPageState extends State<ProfessorCommunitiesPage> {
         ],
       ),
       body: StreamBuilder<QuerySnapshot>(
-<<<<<<< HEAD
         stream: _firestore
             .collection('communities')
             .where('department', isEqualTo: widget.department)
             .where('year', isEqualTo: widget.year)
             .snapshots(),
-=======
-        stream: memberStream,
->>>>>>> 66b4c32a6266dc502f14353a4a8ab8dbb50ce6bd
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return Center(
@@ -274,7 +255,6 @@ class _ProfessorCommunitiesPageState extends State<ProfessorCommunitiesPage> {
               ),
             );
           }
-<<<<<<< HEAD
           
           // Filter communities where user is either admin or member
           final allDocs = snapshot.data!.docs.where((doc) {
@@ -283,18 +263,6 @@ class _ProfessorCommunitiesPageState extends State<ProfessorCommunitiesPage> {
             final members = (data['members'] as List?) ?? [];
             return admins.contains(uid) || members.contains(uid);
           }).toList();
-
-=======
-
-          // Filter communities where user is either admin or member
-          final allDocs = snapshot.data!.docs.where((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            final admins = (data['admins'] as List?) ?? [];
-            final members = (data['members'] as List?) ?? [];
-            return admins.contains(uid) || members.contains(uid);
-          }).toList();
-
->>>>>>> 66b4c32a6266dc502f14353a4a8ab8dbb50ce6bd
           if (allDocs.isEmpty) {
             return Center(
               child: Column(
@@ -457,12 +425,7 @@ class _ProfessorCommunitiesPageState extends State<ProfessorCommunitiesPage> {
                   final name = data['name'] ?? "Unnamed Community";
                   final isClassGroup = data['isClassGroup'] ?? false;
                   final description = data['description'] ?? '';
-<<<<<<< HEAD
-                  final memberCount =
-                      (data['members'] as List?)?.length ?? 0;
-=======
                   final memberCount = (data['members'] as List?)?.length ?? 0;
->>>>>>> 66b4c32a6266dc502f14353a4a8ab8dbb50ce6bd
 
                   return Container(
                     margin: const EdgeInsets.only(bottom: 12),
