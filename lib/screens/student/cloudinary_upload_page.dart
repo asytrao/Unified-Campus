@@ -17,7 +17,7 @@ class _CloudinaryUploadPageState extends State<CloudinaryUploadPage> {
 
   // Your Cloudinary details
   final String cloudName = "dzxbqfatf";
-  final String uploadPreset = "unisgned_preset"; // we’ll set this in Cloudinary
+  final String uploadPreset = "unsigned_preset"; // correct spelling
 
   Future<void> uploadFile() async {
     final result = await FilePicker.platform.pickFiles();
@@ -26,8 +26,9 @@ class _CloudinaryUploadPageState extends State<CloudinaryUploadPage> {
       File file = File(result.files.single.path!);
       setState(() => isUploading = true);
 
-      final url =
-          Uri.parse("https://api.cloudinary.com/v1_1/$cloudName/auto/upload");
+      final url = Uri.parse(
+        "https://api.cloudinary.com/v1_1/$cloudName/auto/upload",
+      );
 
       final request = http.MultipartRequest("POST", url)
         ..fields['upload_preset'] = uploadPreset
@@ -75,7 +76,7 @@ class _CloudinaryUploadPageState extends State<CloudinaryUploadPage> {
                   },
                   child: const Text("Download / Open"),
                 ),
-              ]
+              ],
             ],
           ),
         ),

@@ -1,78 +1,91 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Users collection rules
+
+    // ---------------- USERS ----------------
     match /users/{userId} {
+      // User can read and write their own profile
       allow read, write: if request.auth != null && request.auth.uid == userId;
-      allow read: if request.auth != null && 
-        (resource.data.role == 'professor' || resource.data.role == 'student');
+
+      // Professors can read student docs (to access department/year info)
+      allow read: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'professor';
     }
-    
-    // Subjects collection rules
+
+    // ---------------- DEPARTMENTS ----------------
+    match /departments/{deptId} {
+      // Professors can read/update their own department
+      allow read: if request.auth != null;
+      allow write: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'professor' &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.department == deptId;
+    }
+
+    // ---------------- SUBJECTS ----------------
     match /subjects/{docId} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && 
+
+      // Only professors can create/update/delete subjects
+      allow write: if request.auth != null &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'professor';
-      
+
       match /subjectList/{subjectId} {
         allow read: if request.auth != null;
-        allow write: if request.auth != null && 
+        allow write: if request.auth != null &&
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'professor';
-        
+
         match /content/{contentId} {
           allow read: if request.auth != null;
-          allow write: if request.auth != null && 
+          allow write: if request.auth != null &&
             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'professor';
-          
+
           match /submissions/{submissionId} {
-            allow read: if request.auth != null && 
-              (submissionId == request.auth.uid || 
-               get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'professor');
-            allow write: if request.auth != null && submissionId == request.auth.uid;
+            // Student can read/write their own submissions
+            allow read, write: if request.auth != null && submissionId == request.auth.uid;
+
+            // Professors can read all submissions
+            allow read: if request.auth != null &&
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'professor';
           }
         }
       }
     }
-    
-    // Queries collection rules
+
+    // ---------------- QUERIES ----------------
     match /queries/{docId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-      
+      allow read, write: if request.auth != null;
+
       match /subjectList/{subjectId} {
-        allow read: if request.auth != null;
-        allow write: if request.auth != null;
-        
+        allow read, write: if request.auth != null;
+
         match /queries/{queryId} {
           allow read: if request.auth != null;
-          allow create: if request.auth != null && 
+
+          // Students can create queries
+          allow create: if request.auth != null &&
             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'student';
-          allow update: if request.auth != null && 
-            (resource.data.studentId == request.auth.uid || 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'professor');
-          allow delete: if request.auth != null && 
-            (resource.data.studentId == request.auth.uid || 
+
+          // Students can update/delete their own queries; professors can update/delete all
+          allow update, delete: if request.auth != null &&
+            (resource.data.studentId == request.auth.uid ||
              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'professor');
         }
       }
     }
-    
-    // Communities collection rules
+
+    // ---------------- COMMUNITIES ----------------
     match /communities/{communityId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
-      allow delete: if request.auth != null;
-      
+      allow create, update, delete: if request.auth != null;
+
       match /messages/{messageId} {
         allow read: if request.auth != null;
         allow create: if request.auth != null && request.resource.data.senderId == request.auth.uid;
-        allow update: if request.auth != null && resource.data.senderId == request.auth.uid;
-        allow delete: if request.auth != null && resource.data.senderId == request.auth.uid;
+        allow update, delete: if request.auth != null && resource.data.senderId == request.auth.uid;
       }
     }
-    
-    // Default deny rule
+
+    // ---------------- DEFAULT DENY ----------------
     match /{document=**} {
       allow read, write: if false;
     }
