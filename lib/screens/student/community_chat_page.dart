@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
 
 class CommunityChatPage extends StatefulWidget {
   final String communityId;
@@ -141,9 +144,43 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.info_outline_rounded),
-            onPressed: _showCommunityInfo,
+          FutureBuilder<bool>(
+            future: _isCurrentUserAdmin(),
+            builder: (context, snapshot) {
+              final isAdmin = snapshot.data ?? false;
+              return PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'info') {
+                    _showCommunityInfo();
+                  } else if (value == 'delete' && isAdmin) {
+                    _deleteCommunity();
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'info',
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline_rounded),
+                        SizedBox(width: 8),
+                        Text('Community Info'),
+                      ],
+                    ),
+                  ),
+                  if (isAdmin)
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_outline_rounded, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text('Delete Community', style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -215,13 +252,16 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
                     return Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       child: _MessageBubble(
+                        messageId: messages[index].id,
                         text: data['text'] ?? "",
+                        imageUrl: data['imageUrl'],
                         senderName: data['senderName'] ?? "Unknown",
                         senderRole: data['senderRole'] ?? 'student',
                         isMe: isMe,
                         timestamp: data['createdAt'] != null
                             ? (data['createdAt'] as Timestamp).toDate()
                             : null,
+                        onDelete: isMe ? () => _deleteMessage(messages[index].id) : null,
                       ),
                     );
                   },
@@ -241,6 +281,12 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
             ),
             child: Row(
               children: [
+                IconButton(
+                  icon: const Icon(Icons.image_rounded, color: _primary),
+                  onPressed: _sendImage,
+                  tooltip: "Send Image",
+                ),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
@@ -287,6 +333,142 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _sendImage() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    
+    if (pickedFile == null) return;
+    
+    try {
+      final file = File(pickedFile.path);
+      final fileName = 'chat_images/${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final ref = FirebaseStorage.instance.ref().child(fileName);
+      
+      await ref.putFile(file);
+      final imageUrl = await ref.getDownloadURL();
+      
+      final user = _auth.currentUser!;
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+      final userData = userDoc.data() ?? {};
+      
+      await _firestore
+          .collection('communities')
+          .doc(widget.communityId)
+          .collection('messages')
+          .add({
+            'imageUrl': imageUrl,
+            'senderId': user.uid,
+            'senderName': userData['name'] ?? 'Unknown',
+            'senderRole': userData['role'] ?? 'student',
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+      
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0.0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error sending image: $e')),
+      );
+    }
+  }
+
+  Future<void> _deleteMessage(String messageId) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: _surface,
+        title: const Text('Delete Message?', style: TextStyle(color: _textDark)),
+        content: const Text(
+          'This message will be deleted for everyone.',
+          style: TextStyle(color: _textDark),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(color: _textDark)),
+          ),
+          FilledButton.tonal(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    
+    if (shouldDelete == true) {
+      try {
+        await _firestore
+            .collection('communities')
+            .doc(widget.communityId)
+            .collection('messages')
+            .doc(messageId)
+            .delete();
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error deleting message: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _deleteCommunity() async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: _surface,
+        title: const Text('Delete Community?', style: TextStyle(color: _textDark)),
+        content: const Text(
+          'This will permanently delete the community and all messages. This action cannot be undone.',
+          style: TextStyle(color: _textDark),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(color: _textDark)),
+          ),
+          FilledButton.tonal(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    
+    if (shouldDelete == true) {
+      try {
+        await _firestore.collection('communities').doc(widget.communityId).delete();
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Community deleted successfully')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error deleting community: $e')),
+        );
+      }
+    }
+  }
+
+  Future<bool> _isCurrentUserAdmin() async {
+    try {
+      final communityDoc = await _firestore
+          .collection('communities')
+          .doc(widget.communityId)
+          .get();
+      final data = communityDoc.data() ?? {};
+      final adminIds = List<String>.from(data['admins'] ?? []);
+      return adminIds.contains(_auth.currentUser!.uid);
+    } catch (e) {
+      return false;
+    }
   }
 
   void _showCommunityInfo() async {
@@ -630,22 +812,28 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
 
 // Custom widget for message bubbles
 class _MessageBubble extends StatelessWidget {
+  final String messageId;
   final String text;
+  final String? imageUrl;
   final String senderName;
   final String senderRole;
   final bool isMe;
   final DateTime? timestamp;
+  final VoidCallback? onDelete;
 
   static const Color _primary = Color(0xFF2EC4B6);
   static const Color _textDark = Colors.white;
   static const Color _surface = Color(0xFF1A1A1A);
 
   const _MessageBubble({
+    required this.messageId,
     required this.text,
+    this.imageUrl,
     required this.senderName,
     required this.senderRole,
     required this.isMe,
     this.timestamp,
+    this.onDelete,
   });
 
   @override
@@ -679,84 +867,128 @@ class _MessageBubble extends StatelessWidget {
           const SizedBox(width: 8),
         ],
         Flexible(
-          child: Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.75,
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: isMe ? _primary : _surface,
-              borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(20),
-                topRight: const Radius.circular(20),
-                bottomLeft: Radius.circular(isMe ? 20 : 4),
-                bottomRight: Radius.circular(isMe ? 4 : 20),
+          child: GestureDetector(
+            onLongPress: onDelete,
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.75,
               ),
-              border: isMe
-                  ? null
-                  : Border.all(color: _textDark.withOpacity(0.1), width: 1),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (!isMe) ...[
-                  Row(
-                    children: [
-                      Text(
-                        senderName,
-                        style: TextStyle(
-                          color: senderRole == 'professor'
-                              ? const Color(0xFFE67E22)
-                              : const Color(0xFF4A90E2),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: isMe ? _primary : _surface,
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(20),
+                  topRight: const Radius.circular(20),
+                  bottomLeft: Radius.circular(isMe ? 20 : 4),
+                  bottomRight: Radius.circular(isMe ? 4 : 20),
+                ),
+                border: isMe
+                    ? null
+                    : Border.all(color: _textDark.withOpacity(0.1), width: 1),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!isMe) ...[
+                    Row(
+                      children: [
+                        Text(
+                          senderName,
+                          style: TextStyle(
+                            color: senderRole == 'professor'
+                                ? const Color(0xFFE67E22)
+                                : const Color(0xFF4A90E2),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                      if (senderRole == 'professor') ...[
-                        const SizedBox(width: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 1,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE67E22).withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Text(
-                            "PROF",
-                            style: TextStyle(
-                              color: Color(0xFFE67E22),
-                              fontSize: 8,
-                              fontWeight: FontWeight.w700,
+                        if (senderRole == 'professor') ...[
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                              vertical: 1,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE67E22).withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              "PROF",
+                              style: TextStyle(
+                                color: Color(0xFFE67E22),
+                                fontSize: 8,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
+                        ],
+                        if (onDelete != null) ...[
+                          const Spacer(),
+                          Icon(
+                            Icons.more_vert,
+                            size: 12,
+                            color: _textDark.withOpacity(0.5),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                  ] else if (onDelete != null) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Icon(
+                          Icons.more_vert,
+                          size: 12,
+                          color: Colors.white.withOpacity(0.7),
                         ),
                       ],
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                ],
-                Text(
-                  text,
-                  style: TextStyle(
-                    color: isMe ? Colors.white : _textDark,
-                    fontSize: 14,
-                  ),
-                ),
-                if (timestamp != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    _formatTime(timestamp!),
-                    style: TextStyle(
-                      color: isMe
-                          ? Colors.white.withOpacity(0.7)
-                          : _textDark.withOpacity(0.7),
-                      fontSize: 10,
                     ),
-                  ),
+                    const SizedBox(height: 4),
+                  ],
+                  if (imageUrl != null) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        imageUrl!,
+                        width: 200,
+                        height: 200,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            width: 200,
+                            height: 100,
+                            color: Colors.grey.withOpacity(0.3),
+                            child: const Icon(Icons.error, color: Colors.red),
+                          );
+                        },
+                      ),
+                    ),
+                    if (text.isNotEmpty) const SizedBox(height: 8),
+                  ],
+                  if (text.isNotEmpty)
+                    Text(
+                      text,
+                      style: TextStyle(
+                        color: isMe ? Colors.white : _textDark,
+                        fontSize: 14,
+                      ),
+                    ),
+                  if (timestamp != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      _formatTime(timestamp!),
+                      style: TextStyle(
+                        color: isMe
+                            ? Colors.white.withOpacity(0.7)
+                            : _textDark.withOpacity(0.7),
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),

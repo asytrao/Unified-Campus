@@ -124,6 +124,42 @@ service cloud.firestore {
       }
     }
 
+    // ---------------- DOCUMENTS ----------------
+    match /documents/{documentId} {
+      // Anyone can read documents
+      allow read: if request.auth != null;
+      
+      // Students can create documents
+      allow create: if request.auth != null &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'student' &&
+        request.resource.data.uploadedBy == request.auth.uid;
+      
+      // Students can update their own documents (before approval)
+      // Professors can update any document (for approval/rejection)
+      allow update: if request.auth != null && (
+        (resource.data.uploadedBy == request.auth.uid && resource.data.status == 'pending') ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'professor'
+      );
+      
+      // Only document owner can delete their own documents
+      allow delete: if request.auth != null && resource.data.uploadedBy == request.auth.uid;
+    }
+
+    // ---------------- NOTIFICATIONS ----------------
+    match /notifications/{notificationId} {
+      // Users can read their own notifications
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      
+      // System can create notifications for users
+      allow create: if request.auth != null;
+      
+      // Users can update their own notifications (mark as read)
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+      
+      // Users can delete their own notifications
+      allow delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
     // ---------------- DEFAULT DENY ----------------
     match /{document=**} {
       allow read, write: if false;

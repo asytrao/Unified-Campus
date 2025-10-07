@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'professor_community_chat_page.dart';
+import '../../core/widgets/notification_widget.dart';
 
 class ProfessorCommunitiesPage extends StatefulWidget {
   final String year;
@@ -77,7 +78,8 @@ class _ProfessorCommunitiesPageState extends State<ProfessorCommunitiesPage> {
           .where('year', isEqualTo: widget.year)
           .get();
 
-      final members = studentsSnapshot.docs.map((doc) => doc.id).toList();
+      final students = studentsSnapshot.docs.map((doc) => doc.id).toList();
+      final members = [...admins, ...students]; // Include both professors and students
 
       await groupRef.set({
         'name': "${widget.department} ${widget.year} Class Group",
@@ -226,6 +228,7 @@ class _ProfessorCommunitiesPageState extends State<ProfessorCommunitiesPage> {
           ],
         ),
         actions: [
+          const NotificationWidget(),
           Container(
             margin: const EdgeInsets.only(right: 8),
             decoration: BoxDecoration(

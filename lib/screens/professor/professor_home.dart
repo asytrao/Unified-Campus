@@ -166,6 +166,7 @@ class _ProfessorHomePageState extends State<ProfessorHomePage> {
 
     return Scaffold(
       backgroundColor: _background,
+      resizeToAvoidBottomInset: false,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
@@ -342,7 +343,9 @@ class _ProfessorHomePageState extends State<ProfessorHomePage> {
                   },
                 ),
 
-                const SizedBox(height: 8),
+
+
+                const SizedBox(height: 16),
                 // Add year CTA
                 SizedBox(
                   width: double.infinity,
