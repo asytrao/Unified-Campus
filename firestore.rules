@@ -10,6 +10,45 @@ service cloud.firestore {
       // Professors can read student docs (to access department/year info)
       allow read: if request.auth != null &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'professor';
+
+      // Subcollection: notifications (e.g., screenshot notifications)
+      match /notifications/{notificationId} {
+        // Only the owner can read their notifications
+        allow read: if request.auth != null && request.auth.uid == userId;
+
+        // Who can create a notification for a user?
+        // - The user themselves
+        // - Any authenticated professor (to notify students)
+        allow create: if request.auth != null && (
+          request.auth.uid == userId ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'professor'
+        );
+
+        // Only the owner can update/delete their notifications
+        allow update, delete: if request.auth != null && request.auth.uid == userId;
+
+        // Optional: basic validation for notification payloads
+        function isValidNotification() {
+          return request.resource.data.keys().hasAll(['title','message','createdAt']) &&
+                 (request.resource.data.imageUrl is string || request.resource.data.imageUrl == null) &&
+                 request.resource.data.createdAt == request.time;
+        }
+      }
+
+      // Subcollection: screenshots (metadata documents referencing Storage URLs)
+      match /screenshots/{screenshotId} {
+        // Only the owner can read their screenshots metadata
+        allow read: if request.auth != null && request.auth.uid == userId;
+
+        // The owner or a professor can create screenshot metadata docs
+        allow create: if request.auth != null && (
+          request.auth.uid == userId ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'professor'
+        );
+
+        // Only the owner can update/delete
+        allow update, delete: if request.auth != null && request.auth.uid == userId;
+      }
     }
 
     // ---------------- DEPARTMENTS ----------------
