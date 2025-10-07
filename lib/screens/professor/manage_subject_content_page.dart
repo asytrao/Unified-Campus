@@ -1205,61 +1205,95 @@ class _PDFViewerPageState extends State<PDFViewerPage> {
 
     if (_error != null) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red.withOpacity(0.6),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _error!,
-              style: const TextStyle(fontSize: 16, color: Color(0xFF2C3E50)),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              "URL: ${widget.pdfUrl}",
-              style: TextStyle(
-                fontSize: 12,
-                color: const Color(0xFF2C3E50).withOpacity(0.6),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline_rounded,
+                size: 64,
+                color: Colors.red,
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _isLoading = true;
-                      _error = null;
-                    });
-                    _validateUrl();
-                  },
-                  icon: const Icon(Icons.refresh),
-                  label: const Text("Try Again"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF2EC4B6),
-                    foregroundColor: Colors.white,
+              const SizedBox(height: 16),
+              Text(
+                "Error Loading PDF",
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF2C3E50),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.red.withOpacity(0.3)),
+                ),
+                child: Text(
+                  _error!,
+                  textAlign: TextAlign.left,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Color(0xFF2C3E50),
+                    fontFamily: 'monospace',
                   ),
                 ),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  icon: const Icon(Icons.arrow_back),
-                  label: const Text("Go Back"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey,
-                    foregroundColor: Colors.white,
-                  ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "URL: ${widget.pdfUrl}",
+                style: TextStyle(
+                  fontSize: 12,
+                  color: const Color(0xFF2C3E50).withOpacity(0.6),
                 ),
-              ],
-            ),
-          ],
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      try {
+                        final uri = Uri.parse(widget.pdfUrl);
+                        if (await canLaunchUrl(uri)) {
+                          await launchUrl(uri, mode: LaunchMode.externalApplication);
+                        }
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("Cannot open in browser: $e")),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.open_in_browser),
+                    label: const Text("Open in Browser"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2EC4B6),
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _isLoading = true;
+                        _error = null;
+                      });
+                      _validateUrl();
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: const Text("Try Again"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -1269,8 +1303,12 @@ class _PDFViewerPageState extends State<PDFViewerPage> {
       onDocumentLoadFailed: (PdfDocumentLoadFailedDetails details) {
         setState(() {
           _error =
-              "Failed to load PDF: ${details.error}\n\nURL: ${widget.pdfUrl}\n\nPossible issues:\n• File may not be a valid PDF\n• File may be corrupted\n• Network connectivity issue\n• File access permissions";
+              "Failed to load PDF: ${details.error}\n\nURL: ${widget.pdfUrl}\n\nPossible issues:\n• File may not be a valid PDF\n• File may be corrupted\n• Network connectivity issue\n• File access permissions\n• CORS policy restrictions\n\nTry opening in browser instead.";
         });
+      },
+      onDocumentLoaded: (PdfDocumentLoadedDetails details) {
+        // PDF loaded successfully
+        print("PDF loaded successfully: ${details.document.pages.count} pages");
       },
     );
   }

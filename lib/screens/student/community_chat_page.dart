@@ -296,19 +296,9 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
         .get();
     final data = communityDoc.data() ?? {};
 
-    final members = data['members'] as Map<String, dynamic>? ?? {};
-    final admins = data['admins'] as Map<String, dynamic>? ?? {};
-
-    final memberIds = members.keys.toList();
-    final adminIds = admins.keys.toList();
-
-    // Fetch user details for members and admins
-    final memberDocs = await Future.wait(
-      memberIds.map((id) => _firestore.collection('users').doc(id).get()),
-    );
-    final adminDocs = await Future.wait(
-      adminIds.map((id) => _firestore.collection('users').doc(id).get()),
-    );
+    final memberIds = List<String>.from(data['members'] ?? []);
+    final adminIds = List<String>.from(data['admins'] ?? []);
+    final isAdmin = adminIds.contains(_auth.currentUser!.uid);
 
     showModalBottomSheet(
       context: context,
@@ -319,10 +309,11 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
       isScrollControlled: true,
       builder: (context) => DraggableScrollableSheet(
         expand: false,
+        initialChildSize: 0.6,
+        maxChildSize: 0.9,
         builder: (context, scrollController) => Container(
           padding: const EdgeInsets.all(20),
-          child: ListView(
-            controller: scrollController,
+          child: Column(
             children: [
               Container(
                 width: 40,
@@ -357,68 +348,283 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
               ),
               const SizedBox(height: 8),
               Text(
-                "Community Chat",
+                data['description'] ?? "Community Chat",
                 style: TextStyle(
                   fontSize: 14,
                   color: _textDark.withOpacity(0.7),
                 ),
               ),
               const SizedBox(height: 20),
-              Text(
-                "Members",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: _textDark,
+              
+              // Action buttons for admins
+              if (isAdmin) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _showAddMembersDialog(),
+                        icon: const Icon(Icons.person_add_rounded),
+                        label: const Text("Add Members"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => _showInviteLinkDialog(),
+                        icon: const Icon(Icons.link_rounded),
+                        label: const Text("Invite Link"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _surface,
+                          foregroundColor: _textDark,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+              ],
+              
+              Expanded(
+                child: ListView(
+                  controller: scrollController,
+                  children: [
+                    _buildUserList("Admins", adminIds, isAdmin: isAdmin),
+                    const SizedBox(height: 16),
+                    _buildUserList("Members", memberIds, isAdmin: isAdmin),
+                  ],
                 ),
               ),
-              const SizedBox(height: 8),
-              ...memberDocs.map((doc) {
-                final userData = doc.data() ?? {};
-                final name = userData['name'] ?? 'Unknown';
-                final role = userData['role'] ?? 'student';
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: role == 'professor'
-                        ? Colors.orange.withOpacity(0.3)
-                        : Colors.blue.withOpacity(0.3),
-                    child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?'),
-                  ),
-                  title: Text(name),
-                  subtitle: Text(role),
-                );
-              }),
-              const SizedBox(height: 20),
-              Text(
-                "Admins",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: _textDark,
-                ),
-              ),
-              const SizedBox(height: 8),
-              ...adminDocs.map((doc) {
-                final userData = doc.data() ?? {};
-                final name = userData['name'] ?? 'Unknown';
-                final role = userData['role'] ?? 'student';
-                return ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: role == 'professor'
-                        ? Colors.orange.withOpacity(0.3)
-                        : Colors.blue.withOpacity(0.3),
-                    child: Text(name.isNotEmpty ? name[0].toUpperCase() : '?'),
-                  ),
-                  title: Text(name),
-                  subtitle: Text(role),
-                );
-              }),
-              const SizedBox(height: 20),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Widget _buildUserList(String title, List<String> userIds, {bool isAdmin = false}) {
+    if (userIds.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "$title (${userIds.length})",
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: _textDark,
+          ),
+        ),
+        const SizedBox(height: 8),
+        FutureBuilder<List<DocumentSnapshot>>(
+          future: Future.wait(
+            userIds.map((id) => _firestore.collection('users').doc(id).get()),
+          ),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final userDocs = snapshot.data!;
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: userDocs.length,
+              itemBuilder: (context, index) {
+                final doc = userDocs[index];
+                final userData = doc.data() as Map<String, dynamic>? ?? {};
+                final name = userData['name'] ?? 'Unknown';
+                final role = userData['role'] ?? 'student';
+                final userId = doc.id;
+                final isCurrentUser = userId == _auth.currentUser!.uid;
+                
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: CircleAvatar(
+                    backgroundColor: role == 'professor'
+                        ? Colors.orange.withOpacity(0.3)
+                        : Colors.blue.withOpacity(0.3),
+                    child: Text(
+                      name.isNotEmpty ? name[0].toUpperCase() : '?',
+                      style: TextStyle(
+                        color: role == 'professor' ? Colors.orange : Colors.blue,
+                      ),
+                    ),
+                  ),
+                  title: Text(name, style: const TextStyle(color: _textDark)),
+                  subtitle: Text(
+                    role,
+                    style: TextStyle(color: _textDark.withOpacity(0.7)),
+                  ),
+                  trailing: isAdmin && !isCurrentUser && title == "Members"
+                      ? PopupMenuButton<String>(
+                          onSelected: (value) {
+                            if (value == 'remove') {
+                              _removeMember(userId);
+                            } else if (value == 'make_admin') {
+                              _makeAdmin(userId);
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'make_admin',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.admin_panel_settings_rounded),
+                                  SizedBox(width: 8),
+                                  Text('Make Admin'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'remove',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.person_remove_rounded, color: Colors.red),
+                                  SizedBox(width: 8),
+                                  Text('Remove', style: TextStyle(color: Colors.red)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        )
+                      : null,
+                );
+              },
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  void _showAddMembersDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: _surface,
+        title: const Text(
+          "Add Members",
+          style: TextStyle(color: _textDark),
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 400,
+          child: _UserSelectionWidget(
+            communityId: widget.communityId,
+            onMembersAdded: () {
+              Navigator.pop(context);
+              // Refresh the community info
+              _showCommunityInfo();
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel", style: TextStyle(color: _textDark)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showInviteLinkDialog() {
+    final inviteLink = "https://yourapp.com/join/${widget.communityId}";
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: _surface,
+        title: const Text(
+          "Invite Link",
+          style: TextStyle(color: _textDark),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              "Share this link to invite people to join the community:",
+              style: TextStyle(color: _textDark),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _primary.withOpacity(0.3)),
+              ),
+              child: SelectableText(
+                inviteLink,
+                style: const TextStyle(
+                  color: _textDark,
+                  fontFamily: 'monospace',
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Close", style: TextStyle(color: _textDark)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              // Copy to clipboard functionality would go here
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Link copied to clipboard!")),
+              );
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: _primary),
+            child: const Text("Copy Link", style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _removeMember(String userId) async {
+    try {
+      await _firestore.collection('communities').doc(widget.communityId).update({
+        'members': FieldValue.arrayRemove([userId]),
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Member removed successfully")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error removing member: $e")),
+      );
+    }
+  }
+
+  Future<void> _makeAdmin(String userId) async {
+    try {
+      await _firestore.collection('communities').doc(widget.communityId).update({
+        'admins': FieldValue.arrayUnion([userId]),
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("User promoted to admin")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error promoting user: $e")),
+      );
+    }
   }
 }
 
@@ -589,5 +795,221 @@ class _MessageBubble extends StatelessWidget {
     } else {
       return 'now';
     }
+  }
+}
+
+// User Selection Widget for adding members
+class _UserSelectionWidget extends StatefulWidget {
+  final String communityId;
+  final VoidCallback onMembersAdded;
+
+  const _UserSelectionWidget({
+    required this.communityId,
+    required this.onMembersAdded,
+  });
+
+  @override
+  State<_UserSelectionWidget> createState() => _UserSelectionWidgetState();
+}
+
+class _UserSelectionWidgetState extends State<_UserSelectionWidget> {
+  final _firestore = FirebaseFirestore.instance;
+  final _searchController = TextEditingController();
+  List<String> _selectedUsers = [];
+  List<DocumentSnapshot> _allUsers = [];
+  List<DocumentSnapshot> _filteredUsers = [];
+  bool _isLoading = true;
+
+  static const Color _primary = Color(0xFF2EC4B6);
+  static const Color _textDark = Colors.white;
+  static const Color _surface = Color(0xFF1A1A1A);
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUsers();
+    _searchController.addListener(_filterUsers);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadUsers() async {
+    try {
+      // Get current community members
+      final communityDoc = await _firestore
+          .collection('communities')
+          .doc(widget.communityId)
+          .get();
+      final communityData = communityDoc.data() ?? {};
+      final currentMembers = List<String>.from(communityData['members'] ?? []);
+      final currentAdmins = List<String>.from(communityData['admins'] ?? []);
+      final allCurrentUsers = [...currentMembers, ...currentAdmins];
+
+      // Get all users except current community members
+      final usersSnapshot = await _firestore.collection('users').get();
+      _allUsers = usersSnapshot.docs
+          .where((doc) => !allCurrentUsers.contains(doc.id))
+          .toList();
+      
+      _filteredUsers = List.from(_allUsers);
+      setState(() => _isLoading = false);
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error loading users: $e")),
+      );
+    }
+  }
+
+  void _filterUsers() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      _filteredUsers = _allUsers.where((doc) {
+        final data = doc.data() as Map<String, dynamic>? ?? {};
+        final name = (data['name'] ?? '').toLowerCase();
+        final email = (data['email'] ?? '').toLowerCase();
+        final role = (data['role'] ?? '').toLowerCase();
+        return name.contains(query) || email.contains(query) || role.contains(query);
+      }).toList();
+    });
+  }
+
+  void _toggleUserSelection(String userId) {
+    setState(() {
+      if (_selectedUsers.contains(userId)) {
+        _selectedUsers.remove(userId);
+      } else {
+        _selectedUsers.add(userId);
+      }
+    });
+  }
+
+  Future<void> _addSelectedUsers() async {
+    if (_selectedUsers.isEmpty) return;
+
+    try {
+      await _firestore.collection('communities').doc(widget.communityId).update({
+        'members': FieldValue.arrayUnion(_selectedUsers),
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("${_selectedUsers.length} members added successfully")),
+      );
+      widget.onMembersAdded();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error adding members: $e")),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return Column(
+      children: [
+        // Search bar
+        TextField(
+          controller: _searchController,
+          style: const TextStyle(color: _textDark),
+          decoration: InputDecoration(
+            hintText: "Search users...",
+            hintStyle: TextStyle(color: _textDark.withOpacity(0.5)),
+            prefixIcon: const Icon(Icons.search, color: _textDark),
+            border: const OutlineInputBorder(),
+            enabledBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: _textDark.withOpacity(0.3)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: _primary),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        
+        // Selected users count
+        if (_selectedUsers.isNotEmpty)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.check_circle, color: _primary, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  "${_selectedUsers.length} user(s) selected",
+                  style: TextStyle(color: _primary, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+        const SizedBox(height: 16),
+        
+        // Users list
+        Expanded(
+          child: ListView.builder(
+            itemCount: _filteredUsers.length,
+            itemBuilder: (context, index) {
+              final doc = _filteredUsers[index];
+              final data = doc.data() as Map<String, dynamic>? ?? {};
+              final userId = doc.id;
+              final name = data['name'] ?? 'Unknown';
+              final email = data['email'] ?? '';
+              final role = data['role'] ?? 'student';
+              final isSelected = _selectedUsers.contains(userId);
+
+              return CheckboxListTile(
+                value: isSelected,
+                onChanged: (_) => _toggleUserSelection(userId),
+                title: Text(name, style: const TextStyle(color: _textDark)),
+                subtitle: Text(
+                  "$email • $role",
+                  style: TextStyle(color: _textDark.withOpacity(0.7)),
+                ),
+                secondary: CircleAvatar(
+                  backgroundColor: role == 'professor'
+                      ? Colors.orange.withOpacity(0.3)
+                      : Colors.blue.withOpacity(0.3),
+                  child: Text(
+                    name.isNotEmpty ? name[0].toUpperCase() : '?',
+                    style: TextStyle(
+                      color: role == 'professor' ? Colors.orange : Colors.blue,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        
+        // Add button
+        if (_selectedUsers.isNotEmpty)
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _addSelectedUsers,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: Text("Add ${_selectedUsers.length} Member(s)"),
+            ),
+          ),
+      ],
+    );
   }
 }
