@@ -6,6 +6,7 @@ import 'subject_list_page.dart'; // NEW: added import
 import 'subject_manager_page.dart';
 import 'add_year_page.dart';
 import '../auth/login_page.dart';
+import '../common/security_settings_page.dart';
 
 class ProfessorHomePage extends StatefulWidget {
   const ProfessorHomePage({super.key});
@@ -207,6 +208,25 @@ class _ProfessorHomePageState extends State<ProfessorHomePage> {
                       ),
                     ),
                     const Spacer(),
+                    IconButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const SecuritySettingsPage(),
+                          ),
+                        );
+                      },
+                      style: IconButton.styleFrom(
+                        foregroundColor: _textDark,
+                        backgroundColor: _surface,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.security),
+                    ),
+                    const SizedBox(width: 8),
                     TextButton.icon(
                       onPressed: () async {
                         await _auth.signOut();

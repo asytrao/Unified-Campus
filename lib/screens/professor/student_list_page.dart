@@ -103,11 +103,13 @@ class StudentListPage extends StatelessWidget {
               final data = students[index].data() as Map<String, dynamic>;
               final name = data['name'] ?? 'Unnamed';
               final email = data['email'] ?? 'No email';
+              final rollNumber = data['rollNumber'];
 
               return _StudentTile(
                 name: name,
                 email: email,
                 studentId: students[index].id,
+                rollNumber: rollNumber,
               );
             },
           );
@@ -121,6 +123,7 @@ class _StudentTile extends StatelessWidget {
   final String name;
   final String email;
   final String studentId;
+  final String? rollNumber;
 
   static const Color _textDark = Color(0xFF2C3E50);
   static const Color _surface = Colors.white;
@@ -130,6 +133,7 @@ class _StudentTile extends StatelessWidget {
     required this.name,
     required this.email,
     required this.studentId,
+    this.rollNumber,
   });
 
   @override
@@ -191,12 +195,33 @@ class _StudentTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  'ID: ${studentId.substring(0, 8)}...',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: _textDark.withOpacity(0.5),
-                  ),
+                Row(
+                  children: [
+                    if (rollNumber != null) ...[
+                      Text(
+                        'Roll: $rollNumber',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: _textDark.withOpacity(0.8),
+                        ),
+                      ),
+                      Text(
+                        ' • ',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _textDark.withOpacity(0.5),
+                        ),
+                      ),
+                    ],
+                    Text(
+                      'ID: ${studentId.substring(0, 8)}...',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _textDark.withOpacity(0.5),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

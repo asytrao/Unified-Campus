@@ -166,31 +166,7 @@ class _DocumentViewerState extends State<DocumentViewer> {
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : errorMessage != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.error_outline,
-                        size: 64,
-                        color: Colors.red,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        errorMessage!,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _openExternally,
-                        child: const Text('Open Externally'),
-                      ),
-                    ],
-                  ),
-                )
-              : _buildDocumentContent(),
+          : _buildDocumentContent(),
     );
   }
 

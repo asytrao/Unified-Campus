@@ -626,6 +626,7 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
                 final userData = doc.data() as Map<String, dynamic>? ?? {};
                 final name = userData['name'] ?? 'Unknown';
                 final role = userData['role'] ?? 'student';
+                final rollNumber = userData['rollNumber'];
                 final userId = doc.id;
                 final isCurrentUser = userId == _auth.currentUser!.uid;
                 
@@ -644,7 +645,9 @@ class _CommunityChatPageState extends State<CommunityChatPage> {
                   ),
                   title: Text(name, style: const TextStyle(color: _textDark)),
                   subtitle: Text(
-                    role,
+                    role == 'student' && rollNumber != null
+                        ? '$role • Roll: $rollNumber'
+                        : role,
                     style: TextStyle(color: _textDark.withOpacity(0.7)),
                   ),
                   trailing: isAdmin && !isCurrentUser && title == "Members"
@@ -1198,6 +1201,7 @@ class _UserSelectionWidgetState extends State<_UserSelectionWidget> {
               final name = data['name'] ?? 'Unknown';
               final email = data['email'] ?? '';
               final role = data['role'] ?? 'student';
+              final rollNumber = data['rollNumber'];
               final isSelected = _selectedUsers.contains(userId);
 
               return CheckboxListTile(
@@ -1205,7 +1209,9 @@ class _UserSelectionWidgetState extends State<_UserSelectionWidget> {
                 onChanged: (_) => _toggleUserSelection(userId),
                 title: Text(name, style: const TextStyle(color: _textDark)),
                 subtitle: Text(
-                  "$email • $role",
+                  role == 'student' && rollNumber != null
+                      ? "$email • $role • Roll: $rollNumber"
+                      : "$email • $role",
                   style: TextStyle(color: _textDark.withOpacity(0.7)),
                 ),
                 secondary: CircleAvatar(

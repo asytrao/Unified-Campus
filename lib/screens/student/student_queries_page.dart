@@ -64,12 +64,15 @@ class _StudentQueriesPageState extends State<StudentQueriesPage> {
     try {
       final user = _auth.currentUser;
       final userDoc = await _firestore.collection('users').doc(user!.uid).get();
-      final userName = userDoc.data()?['name'] ?? 'Student';
+      final userData = userDoc.data() ?? {};
+      final userName = userData['name'] ?? 'Student';
+      final rollNumber = userData['rollNumber'];
 
       await queryCollection.add({
         'question': queryText, // Changed to match professor page's field
         'studentId': user.uid,
         'studentName': userName,
+        'studentRollNumber': rollNumber,
         'isResolved': false,
         'solution': '',
         'createdAt': FieldValue.serverTimestamp(),

@@ -716,7 +716,7 @@ class ContentSubmissionStatusPage extends StatelessWidget {
           builder: (_) => DocumentViewer(
             documentUrl: url,
             documentName: 'Student Submission',
-            documentType: getDocumentType(url),
+            documentType: _getDocumentType(url),
           ),
         ),
       );
@@ -725,6 +725,10 @@ class ContentSubmissionStatusPage extends StatelessWidget {
         SnackBar(content: Text("⚠️ Error opening file: $e")),
       );
     }
+  }
+
+  String _getDocumentType(String url) {
+    return getDocumentType(url);
   }
 
   @override

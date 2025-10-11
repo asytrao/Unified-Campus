@@ -7,7 +7,7 @@ service cloud.firestore {
       // User can read and write their own profile
       allow read, write: if request.auth != null && request.auth.uid == userId;
 
-      // Professors can read student docs (to access department/year info)
+      // Professors can read student docs (to access department/year/rollNumber info)
       allow read: if request.auth != null &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'professor';
 
@@ -150,8 +150,18 @@ service cloud.firestore {
       // Users can read their own notifications
       allow read: if request.auth != null && resource.data.userId == request.auth.uid;
       
-      // System can create notifications for users
-      allow create: if request.auth != null;
+      // Create notifications for:
+      // 1. Student document submissions (notify professors)
+      // 2. Student queries (notify professors)
+      // 3. Community messages (notify all members)
+      // 4. Query resolutions (notify students)
+      // 5. New assignments/practicals (notify students)
+      allow create: if request.auth != null && (
+        // Students can create notifications for professors (submissions, queries, messages)
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'student' ||
+        // Professors can create notifications for students (assignments, query responses, messages)
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'professor'
+      );
       
       // Users can update their own notifications (mark as read)
       allow update: if request.auth != null && resource.data.userId == request.auth.uid;

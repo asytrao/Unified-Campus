@@ -123,12 +123,14 @@ class _ProfessorQueryPageState extends State<ProfessorQueryPage> {
               final docRef = queries[index].reference;
 
               final studentName = data['studentName'] ?? 'Unknown';
+              final studentRollNumber = data['studentRollNumber'];
               final question = data['question'] ?? '';
               final isResolved = data['isResolved'] ?? false;
               final solution = data['solution'] ?? '';
 
               return _QueryCard(
                 studentName: studentName,
+                studentRollNumber: studentRollNumber,
                 question: question,
                 isResolved: isResolved,
                 solution: solution,
@@ -156,6 +158,7 @@ class _ProfessorQueryPageState extends State<ProfessorQueryPage> {
 
 class _QueryCard extends StatefulWidget {
   final String studentName;
+  final String? studentRollNumber;
   final String question;
   final bool isResolved;
   final String solution;
@@ -163,6 +166,7 @@ class _QueryCard extends StatefulWidget {
 
   const _QueryCard({
     required this.studentName,
+    this.studentRollNumber,
     required this.question,
     required this.isResolved,
     required this.solution,
@@ -237,7 +241,9 @@ class _QueryCardState extends State<_QueryCard> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          widget.studentName,
+                          widget.studentRollNumber != null
+                              ? '${widget.studentName} (Roll: ${widget.studentRollNumber})'
+                              : widget.studentName,
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,

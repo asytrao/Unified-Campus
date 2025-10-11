@@ -28,7 +28,7 @@ class _StudentSubmissionsPageState extends State<StudentSubmissionsPage> {
 
   // Cloudinary details
   final String cloudName = "dzxbqfatf";
-  final String uploadPreset = "unsigned_preset";
+  final String uploadPreset = "student_presets";
 
   late final CollectionReference contentCollection;
   late final String studentId;
@@ -88,41 +88,21 @@ class _StudentSubmissionsPageState extends State<StudentSubmissionsPage> {
       });
 
       // Upload to Cloudinary
-      final extension = fileName.split('.').last.toLowerCase();
-      final isImage = [
-        'jpg',
-        'jpeg',
-        'png',
-        'gif',
-        'bmp',
-        'webp',
-      ].contains(extension);
-
-      final uri = Uri.parse(
-        "https://api.cloudinary.com/v1_1/$cloudName/${isImage ? 'image' : 'raw'}/upload",
-      );
-      final request = http.MultipartRequest("POST", uri)
-        ..fields['upload_preset'] = uploadPreset
-        ..files.add(await http.MultipartFile.fromPath('file', file.path));
-
-      final streamedResponse = await request.send();
-
-      final response = await http.Response.fromStream(streamedResponse);
+      final uri = Uri.parse('https://api.cloudinary.com/v1_1/$cloudName/upload');
+      final request = http.MultipartRequest('POST', uri);
+      
+      request.fields['upload_preset'] = uploadPreset;
+      request.files.add(await http.MultipartFile.fromPath('file', filePath));
+      
+      final response = await request.send();
+      final responseData = await response.stream.bytesToString();
+      
       if (response.statusCode != 200) {
-        final errorMsg =
-            json.decode(response.body)['error']?['message'] ?? "Upload failed";
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("❌ Upload failed: $errorMsg")));
-        setState(() {
-          _uploading = false;
-          _progress = 0.0;
-        });
-        return;
+        throw Exception('Upload failed: ${response.statusCode}');
       }
-
-      final responseData = json.decode(response.body);
-      final downloadUrl = responseData['secure_url'];
+      
+      final jsonResponse = json.decode(responseData);
+      final downloadUrl = jsonResponse['secure_url'];
 
       // Save submission info in Firestore
       await contentCollection

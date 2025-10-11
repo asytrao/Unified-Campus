@@ -5,6 +5,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 
 import '../student/student_home.dart';
 import '../professor/professor_home.dart';
+import 'biometric_verify_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -46,21 +47,45 @@ class _LoginPageState extends State<LoginPage> {
 
       final data = userDoc.data() as Map<String, dynamic>;
       final role = data['role'];
+      final biometricEnabled = data['biometricEnabled'] ?? false;
 
-      if (role == 'student') {
-        await saveDeviceToken();
-        Navigator.pushReplacement(
+      if (biometricEnabled) {
+        // Show biometric verification page
+        Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const StudentHomePage()),
-        );
-      } else if (role == 'professor') {
-        await saveDeviceToken();
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const ProfessorHomePage()),
+          MaterialPageRoute(
+            builder: (_) => BiometricVerifyPage(
+              onSuccess: () async {
+                await saveDeviceToken();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => role == 'student' 
+                        ? const StudentHomePage() 
+                        : const ProfessorHomePage(),
+                  ),
+                );
+              },
+            ),
+          ),
         );
       } else {
-        throw Exception("Invalid user role.");
+        // Direct login without 2FA
+        if (role == 'student') {
+          await saveDeviceToken();
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const StudentHomePage()),
+          );
+        } else if (role == 'professor') {
+          await saveDeviceToken();
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const ProfessorHomePage()),
+          );
+        } else {
+          throw Exception("Invalid user role.");
+        }
       }
     } catch (e) {
       ScaffoldMessenger.of(

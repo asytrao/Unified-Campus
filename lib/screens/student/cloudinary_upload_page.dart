@@ -17,7 +17,7 @@ class _CloudinaryUploadPageState extends State<CloudinaryUploadPage> {
 
   // Your Cloudinary details
   final String cloudName = "dzxbqfatf";
-  final String uploadPreset = "unsigned_preset"; // correct spelling
+  final String uploadPreset = "student_presets";
 
   Future<void> uploadFile() async {
     final result = await FilePicker.platform.pickFiles();

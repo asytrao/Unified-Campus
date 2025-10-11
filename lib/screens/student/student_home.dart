@@ -5,6 +5,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import '../auth/login_page.dart';
 import 'student_subject_options_page.dart';
 import 'communities_page.dart';
+import '../common/security_settings_page.dart';
 
 class StudentHomePage extends StatefulWidget {
   const StudentHomePage({super.key});
@@ -17,7 +18,7 @@ class _StudentHomePageState extends State<StudentHomePage> {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
 
-  String? name, email, department, year;
+  String? name, email, department, year, rollNumber;
   bool loading = true;
 
   // Dark theme color scheme
@@ -47,6 +48,7 @@ class _StudentHomePageState extends State<StudentHomePage> {
       email = data['email'];
       department = data['department'];
       year = data['year'];
+      rollNumber = data['rollNumber'];
 
       await ensureClassCommunity();
 
@@ -163,6 +165,25 @@ class _StudentHomePageState extends State<StudentHomePage> {
                       ),
                     ),
                     const Spacer(),
+                    IconButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const SecuritySettingsPage(),
+                          ),
+                        );
+                      },
+                      style: IconButton.styleFrom(
+                        foregroundColor: _textPrimary,
+                        backgroundColor: _surface,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.security),
+                    ),
+                    const SizedBox(width: 8),
                     TextButton.icon(
                       onPressed: () async {
                         await _auth.signOut();
@@ -219,7 +240,7 @@ class _StudentHomePageState extends State<StudentHomePage> {
                             const SizedBox(height: 4),
                             Text(
                               department != null && year != null
-                                  ? '$year • $department'
+                                  ? '$year • $department${rollNumber != null ? ' • Roll: $rollNumber' : ''}'
                                   : '',
                               style: TextStyle(color: _textSecondary),
                             ),
