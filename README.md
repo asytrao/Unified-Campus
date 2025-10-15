@@ -1,7 +1,7 @@
 # 🎓 Unified Campus
 
 A comprehensive Flutter-based campus management system that connects students and professors through an integrated platform for academic activities, document management, and community interaction.
-
+Anyone willing to add improvements is welcomed.
 ## ✨ Features
 
 ### 👨‍🎓 Student Features
